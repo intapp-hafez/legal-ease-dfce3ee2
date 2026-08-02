@@ -38,12 +38,12 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
         </span>
         <div className="leading-tight">
           <p className="font-display text-base font-bold">INT القانوني</p>
-          <p className="text-xs text-sidebar-foreground/60">نظام إدارة الشؤون القانونية</p>
+          <p className="text-xs text-sidebar-foreground/80">نظام إدارة الشؤون القانونية</p>
         </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <p className="px-2 pb-2 text-[11px] font-semibold tracking-wide text-sidebar-foreground/45">
+        <p className="px-2 pb-2 text-[11px] font-semibold tracking-wide text-sidebar-foreground/70">
           الوحدات الرئيسية
         </p>
         <ul className="space-y-1">
@@ -57,7 +57,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
                   className:
                     "bg-sidebar-primary/15 text-sidebar-primary-foreground ring-1 ring-sidebar-primary/40",
                 }}
-                inactiveProps={{ className: "text-sidebar-foreground/75" }}
+                inactiveProps={{ className: "text-sidebar-foreground/90" }}
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-sidebar-accent"
               >
                 <Icon className="size-4 shrink-0" />
@@ -68,7 +68,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
         </ul>
       </nav>
 
-      <div className="border-t border-sidebar-border px-5 py-4 text-xs text-sidebar-foreground/60">
+      <div className="border-t border-sidebar-border px-5 py-4 text-xs text-sidebar-foreground/80">
         <p className="font-medium text-sidebar-foreground/85">أ. حافظ رحيم</p>
         <p>المستشار القانوني — Integrated Technics</p>
       </div>
