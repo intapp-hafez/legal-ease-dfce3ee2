@@ -14,6 +14,10 @@ import { Route as CasesRouteImport } from './routes/cases'
 import { Route as ContractsRouteImport } from './routes/contracts'
 import { Route as CustodyRouteImport } from './routes/custody'
 import { Route as DocumentsRouteImport } from './routes/documents'
+import { Route as RepositoryRouteImport } from './routes/repository'
+import { Route as RequestsRouteImport } from './routes/requests'
+import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as ViolationsRouteImport } from './routes/violations'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +44,26 @@ const DocumentsRoute = DocumentsRouteImport.update({
   path: '/documents',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RepositoryRoute = RepositoryRouteImport.update({
+  id: '/repository',
+  path: '/repository',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RequestsRoute = RequestsRouteImport.update({
+  id: '/requests',
+  path: '/requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksRoute = TasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ViolationsRoute = ViolationsRouteImport.update({
+  id: '/violations',
+  path: '/violations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +71,10 @@ export interface FileRoutesByFullPath {
   '/contracts': typeof ContractsRoute
   '/custody': typeof CustodyRoute
   '/documents': typeof DocumentsRoute
+  '/repository': typeof RepositoryRoute
+  '/requests': typeof RequestsRoute
+  '/tasks': typeof TasksRoute
+  '/violations': typeof ViolationsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +82,10 @@ export interface FileRoutesByTo {
   '/contracts': typeof ContractsRoute
   '/custody': typeof CustodyRoute
   '/documents': typeof DocumentsRoute
+  '/repository': typeof RepositoryRoute
+  '/requests': typeof RequestsRoute
+  '/tasks': typeof TasksRoute
+  '/violations': typeof ViolationsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +94,45 @@ export interface FileRoutesById {
   '/contracts': typeof ContractsRoute
   '/custody': typeof CustodyRoute
   '/documents': typeof DocumentsRoute
+  '/repository': typeof RepositoryRoute
+  '/requests': typeof RequestsRoute
+  '/tasks': typeof TasksRoute
+  '/violations': typeof ViolationsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cases' | '/contracts' | '/custody' | '/documents'
+  fullPaths:
+    | '/'
+    | '/cases'
+    | '/contracts'
+    | '/custody'
+    | '/documents'
+    | '/repository'
+    | '/requests'
+    | '/tasks'
+    | '/violations'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cases' | '/contracts' | '/custody' | '/documents'
-  id: '__root__' | '/' | '/cases' | '/contracts' | '/custody' | '/documents'
+  to:
+    | '/'
+    | '/cases'
+    | '/contracts'
+    | '/custody'
+    | '/documents'
+    | '/repository'
+    | '/requests'
+    | '/tasks'
+    | '/violations'
+  id:
+    | '__root__'
+    | '/'
+    | '/cases'
+    | '/contracts'
+    | '/custody'
+    | '/documents'
+    | '/repository'
+    | '/requests'
+    | '/tasks'
+    | '/violations'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +141,10 @@ export interface RootRouteChildren {
   ContractsRoute: typeof ContractsRoute
   CustodyRoute: typeof CustodyRoute
   DocumentsRoute: typeof DocumentsRoute
+  RepositoryRoute: typeof RepositoryRoute
+  RequestsRoute: typeof RequestsRoute
+  TasksRoute: typeof TasksRoute
+  ViolationsRoute: typeof ViolationsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +184,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocumentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/repository': {
+      id: '/repository'
+      path: '/repository'
+      fullPath: '/repository'
+      preLoaderRoute: typeof RepositoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/requests': {
+      id: '/requests'
+      path: '/requests'
+      fullPath: '/requests'
+      preLoaderRoute: typeof RequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks': {
+      id: '/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/violations': {
+      id: '/violations'
+      path: '/violations'
+      fullPath: '/violations'
+      preLoaderRoute: typeof ViolationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,6 +221,10 @@ const rootRouteChildren: RootRouteChildren = {
   ContractsRoute: ContractsRoute,
   CustodyRoute: CustodyRoute,
   DocumentsRoute: DocumentsRoute,
+  RepositoryRoute: RepositoryRoute,
+  RequestsRoute: RequestsRoute,
+  TasksRoute: TasksRoute,
+  ViolationsRoute: ViolationsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
