@@ -11,8 +11,8 @@ import {
   Archive,
   BarChart3,
   Settings,
-  Scale,
 } from "lucide-react";
+import logoAsset from "@/assets/logo.png.asset.json";
 
 const nav = [
   { to: "/", label: "لوحة المعلومات", icon: LayoutDashboard },
@@ -32,8 +32,8 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <aside className="flex h-full w-[264px] shrink-0 flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
-        <span className="flex size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-          <Scale className="size-5" />
+        <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-card p-1">
+          <img src={logoAsset.url} alt="شعار Integrated Technics" className="h-full w-full object-contain" />
         </span>
         <div className="leading-tight">
           <p className="font-display text-base font-bold">INT القانوني</p>
