@@ -18,14 +18,12 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+
 import { PageShell, Panel, StatusPill } from "@/components/legal/PageShell";
 import {
   kpis,
@@ -85,6 +83,20 @@ const chartColors = [
   "var(--color-chart-4)",
   "var(--color-chart-5)",
 ];
+
+const totalAssets = assetsByCategory.reduce((s, a) => s + a.value, 0);
+
+const donutGradient = (() => {
+  let acc = 0;
+  const stops = assetsByCategory.map((a, i) => {
+    const start = (acc / totalAssets) * 360;
+    acc += a.value;
+    const end = (acc / totalAssets) * 360;
+    return `${chartColors[i % chartColors.length]} ${start}deg ${end}deg`;
+  });
+  return `conic-gradient(${stops.join(", ")})`;
+})();
+
 
 function Dashboard() {
   const today = new Date().toLocaleDateString("ar-EG", {
