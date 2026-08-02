@@ -10,33 +10,167 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CasesRouteImport } from './routes/cases'
+import { Route as ContractsRouteImport } from './routes/contracts'
+import { Route as CustodyRouteImport } from './routes/custody'
+import { Route as DocumentsRouteImport } from './routes/documents'
+import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as RepositoryRouteImport } from './routes/repository'
+import { Route as RequestsRouteImport } from './routes/requests'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as ViolationsRouteImport } from './routes/violations'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CasesRoute = CasesRouteImport.update({
+  id: '/cases',
+  path: '/cases',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContractsRoute = ContractsRouteImport.update({
+  id: '/contracts',
+  path: '/contracts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CustodyRoute = CustodyRouteImport.update({
+  id: '/custody',
+  path: '/custody',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocumentsRoute = DocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RepositoryRoute = RepositoryRouteImport.update({
+  id: '/repository',
+  path: '/repository',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RequestsRoute = RequestsRouteImport.update({
+  id: '/requests',
+  path: '/requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksRoute = TasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ViolationsRoute = ViolationsRouteImport.update({
+  id: '/violations',
+  path: '/violations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cases': typeof CasesRoute
+  '/contracts': typeof ContractsRoute
+  '/custody': typeof CustodyRoute
+  '/documents': typeof DocumentsRoute
+  '/reports': typeof ReportsRoute
+  '/repository': typeof RepositoryRoute
+  '/requests': typeof RequestsRoute
+  '/settings': typeof SettingsRoute
+  '/tasks': typeof TasksRoute
+  '/violations': typeof ViolationsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cases': typeof CasesRoute
+  '/contracts': typeof ContractsRoute
+  '/custody': typeof CustodyRoute
+  '/documents': typeof DocumentsRoute
+  '/reports': typeof ReportsRoute
+  '/repository': typeof RepositoryRoute
+  '/requests': typeof RequestsRoute
+  '/settings': typeof SettingsRoute
+  '/tasks': typeof TasksRoute
+  '/violations': typeof ViolationsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cases': typeof CasesRoute
+  '/contracts': typeof ContractsRoute
+  '/custody': typeof CustodyRoute
+  '/documents': typeof DocumentsRoute
+  '/reports': typeof ReportsRoute
+  '/repository': typeof RepositoryRoute
+  '/requests': typeof RequestsRoute
+  '/settings': typeof SettingsRoute
+  '/tasks': typeof TasksRoute
+  '/violations': typeof ViolationsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/cases'
+    | '/contracts'
+    | '/custody'
+    | '/documents'
+    | '/reports'
+    | '/repository'
+    | '/requests'
+    | '/settings'
+    | '/tasks'
+    | '/violations'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/cases'
+    | '/contracts'
+    | '/custody'
+    | '/documents'
+    | '/reports'
+    | '/repository'
+    | '/requests'
+    | '/settings'
+    | '/tasks'
+    | '/violations'
+  id:
+    | '__root__'
+    | '/'
+    | '/cases'
+    | '/contracts'
+    | '/custody'
+    | '/documents'
+    | '/reports'
+    | '/repository'
+    | '/requests'
+    | '/settings'
+    | '/tasks'
+    | '/violations'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CasesRoute: typeof CasesRoute
+  ContractsRoute: typeof ContractsRoute
+  CustodyRoute: typeof CustodyRoute
+  DocumentsRoute: typeof DocumentsRoute
+  ReportsRoute: typeof ReportsRoute
+  RepositoryRoute: typeof RepositoryRoute
+  RequestsRoute: typeof RequestsRoute
+  SettingsRoute: typeof SettingsRoute
+  TasksRoute: typeof TasksRoute
+  ViolationsRoute: typeof ViolationsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +182,92 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cases': {
+      id: '/cases'
+      path: '/cases'
+      fullPath: '/cases'
+      preLoaderRoute: typeof CasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contracts': {
+      id: '/contracts'
+      path: '/contracts'
+      fullPath: '/contracts'
+      preLoaderRoute: typeof ContractsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/custody': {
+      id: '/custody'
+      path: '/custody'
+      fullPath: '/custody'
+      preLoaderRoute: typeof CustodyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/documents': {
+      id: '/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof DocumentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/repository': {
+      id: '/repository'
+      path: '/repository'
+      fullPath: '/repository'
+      preLoaderRoute: typeof RepositoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/requests': {
+      id: '/requests'
+      path: '/requests'
+      fullPath: '/requests'
+      preLoaderRoute: typeof RequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks': {
+      id: '/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/violations': {
+      id: '/violations'
+      path: '/violations'
+      fullPath: '/violations'
+      preLoaderRoute: typeof ViolationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CasesRoute: CasesRoute,
+  ContractsRoute: ContractsRoute,
+  CustodyRoute: CustodyRoute,
+  DocumentsRoute: DocumentsRoute,
+  ReportsRoute: ReportsRoute,
+  RepositoryRoute: RepositoryRoute,
+  RequestsRoute: RequestsRoute,
+  SettingsRoute: SettingsRoute,
+  TasksRoute: TasksRoute,
+  ViolationsRoute: ViolationsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
