@@ -29,11 +29,12 @@ const nav = [
 ] as const;
 
 export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const { branding } = useBranding();
   return (
     <aside className="flex h-full w-[264px] shrink-0 flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
         <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-card p-1">
-          <img src={logoAsset.url} alt="شعار Integrated Technics" className="h-full w-full object-contain" />
+          <img src={branding.logoUrl} alt="شعار Integrated Technics" className="h-full w-full object-contain" />
         </span>
         <div className="leading-tight">
           <p className="font-display text-base font-bold">INT القانوني</p>
