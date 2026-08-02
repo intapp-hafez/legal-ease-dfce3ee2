@@ -154,17 +154,20 @@ function Dashboard() {
 
         <Panel title="توزيع العهد حسب الفئة">
           <div className="h-[280px] w-full" dir="ltr">
-
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={assetsByCategory}
                   dataKey="value"
                   nameKey="name"
+                  cx="50%"
+                  cy="50%"
                   innerRadius={55}
                   outerRadius={95}
                   paddingAngle={3}
+                  isAnimationActive={false}
                 >
+
                   {assetsByCategory.map((_, i) => (
                     <Cell key={i} fill={chartColors[i % chartColors.length]} />
                   ))}
