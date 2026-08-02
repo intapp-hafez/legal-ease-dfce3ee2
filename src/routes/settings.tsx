@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, Panel, DataTable, TagList } from "@/components/legal/PageShell";
+import { BrandingSettings } from "@/components/legal/BrandingSettings";
 import { roles, auditLog, reminderSchedule } from "@/lib/legal-data";
 
 const channels = ["إشعار داخل النظام", "بريد إلكتروني", "رسالة SMS", "واتساب (اختياري)", "إشعار تطبيق الجوال"];
@@ -34,8 +35,13 @@ function SettingsPage() {
   return (
     <PageShell
       title="الإعدادات"
-      description="الأدوار والصلاحيات، قنوات الإشعارات، جدول التذكيرات، وسجل التدقيق."
+      description="الهوية البصرية، الأدوار والصلاحيات، قنوات الإشعارات، جدول التذكيرات، وسجل التدقيق."
     >
+      <div className="mb-5">
+        <BrandingSettings />
+      </div>
+
+
       <div className="grid gap-5 lg:grid-cols-2">
         <Panel title="أدوار المستخدمين والصلاحيات">
           <DataTable
@@ -50,7 +56,7 @@ function SettingsPage() {
               {reminderSchedule.map((d) => (
                 <span
                   key={d}
-                  className="rounded-lg border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent"
+                  className="rounded-lg border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-medium text-[var(--accent-ink)]"
                 >
                   {d} يوم
                 </span>

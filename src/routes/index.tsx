@@ -72,7 +72,7 @@ const icons: Record<string, React.ComponentType<{ className?: string }>> = {
 const toneClass: Record<string, string> = {
   default: "bg-primary/10 text-primary",
   success: "bg-success/12 text-success",
-  warning: "bg-warning/15 text-warning",
+  warning: "bg-warning/15 text-[var(--warning-ink)]",
   danger: "bg-destructive/12 text-destructive",
 };
 
@@ -211,7 +211,7 @@ function Dashboard() {
                   className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-medium ${
                     e.days <= 30
                       ? "border-destructive/25 bg-destructive/10 text-destructive"
-                      : "border-warning/30 bg-warning/12 text-warning"
+                      : "border-warning/30 bg-warning/12 text-[var(--warning-ink)]"
                   }`}
                 >
                   {e.days} يوم

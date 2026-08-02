@@ -54,7 +54,7 @@ function RepositoryPage() {
             key={r.folder}
             className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-panel)] transition-colors hover:border-accent/40"
           >
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent/12 text-accent">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent/12 text-[var(--accent-ink)]">
               <Folder className="size-5" />
             </span>
             <div>
