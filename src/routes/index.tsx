@@ -153,7 +153,8 @@ function Dashboard() {
         </Panel>
 
         <Panel title="توزيع العهد حسب الفئة">
-          <div className="h-[280px] w-full">
+          <div className="h-[280px] w-full" dir="ltr">
+
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
