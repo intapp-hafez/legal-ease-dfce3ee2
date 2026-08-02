@@ -153,36 +153,20 @@ function Dashboard() {
         </Panel>
 
         <Panel title="توزيع العهد حسب الفئة">
-          <div className="h-[280px] w-full" dir="ltr">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={assetsByCategory}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={95}
-                  paddingAngle={3}
-                  isAnimationActive={false}
-                >
-
-                  {assetsByCategory.map((_, i) => (
-                    <Cell key={i} fill={chartColors[i % chartColors.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--color-card)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: 10,
-                    fontSize: 12,
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="flex h-[240px] items-center justify-center">
+            <div
+              className="relative size-[200px] rounded-full"
+              style={{ background: donutGradient }}
+            >
+              <div className="absolute inset-[26%] flex flex-col items-center justify-center rounded-full bg-card">
+                <span className="font-display text-2xl font-bold text-card-foreground">
+                  {totalAssets}
+                </span>
+                <span className="text-xs text-muted-foreground">إجمالي العهد</span>
+              </div>
+            </div>
           </div>
+
           <ul className="mt-2 space-y-1.5">
             {assetsByCategory.map((a, i) => (
               <li key={a.name} className="flex items-center justify-between text-xs">
