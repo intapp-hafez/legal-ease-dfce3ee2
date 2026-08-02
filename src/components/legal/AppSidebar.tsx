@@ -11,8 +11,8 @@ import {
   Archive,
   BarChart3,
   Settings,
-  Scale,
 } from "lucide-react";
+import logoAsset from "@/assets/logo.png.asset.json";
 
 const nav = [
   { to: "/", label: "لوحة المعلومات", icon: LayoutDashboard },
