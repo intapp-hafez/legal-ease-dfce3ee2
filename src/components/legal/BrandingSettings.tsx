@@ -104,7 +104,7 @@ export function BrandingSettings() {
         <span className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground">
           زر أساسي
         </span>
-        <span className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground">
+        <span className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-[var(--accent-ink)]-foreground">
           زر ثانوي
         </span>
         <span className="rounded-md border border-[var(--primary-ink)]/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-[var(--primary-ink)]">
