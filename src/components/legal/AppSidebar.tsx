@@ -12,7 +12,7 @@ import {
   BarChart3,
   Settings,
 } from "lucide-react";
-import logoAsset from "@/assets/logo.png.asset.json";
+import { useBranding } from "@/lib/branding";
 
 const nav = [
   { to: "/", label: "لوحة المعلومات", icon: LayoutDashboard },
