@@ -14,8 +14,10 @@ import { Route as CasesRouteImport } from './routes/cases'
 import { Route as ContractsRouteImport } from './routes/contracts'
 import { Route as CustodyRouteImport } from './routes/custody'
 import { Route as DocumentsRouteImport } from './routes/documents'
+import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as RepositoryRouteImport } from './routes/repository'
 import { Route as RequestsRouteImport } from './routes/requests'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as ViolationsRouteImport } from './routes/violations'
 
@@ -44,6 +46,11 @@ const DocumentsRoute = DocumentsRouteImport.update({
   path: '/documents',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RepositoryRoute = RepositoryRouteImport.update({
   id: '/repository',
   path: '/repository',
@@ -52,6 +59,11 @@ const RepositoryRoute = RepositoryRouteImport.update({
 const RequestsRoute = RequestsRouteImport.update({
   id: '/requests',
   path: '/requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TasksRoute = TasksRouteImport.update({
@@ -71,8 +83,10 @@ export interface FileRoutesByFullPath {
   '/contracts': typeof ContractsRoute
   '/custody': typeof CustodyRoute
   '/documents': typeof DocumentsRoute
+  '/reports': typeof ReportsRoute
   '/repository': typeof RepositoryRoute
   '/requests': typeof RequestsRoute
+  '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/violations': typeof ViolationsRoute
 }
@@ -82,8 +96,10 @@ export interface FileRoutesByTo {
   '/contracts': typeof ContractsRoute
   '/custody': typeof CustodyRoute
   '/documents': typeof DocumentsRoute
+  '/reports': typeof ReportsRoute
   '/repository': typeof RepositoryRoute
   '/requests': typeof RequestsRoute
+  '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/violations': typeof ViolationsRoute
 }
@@ -94,8 +110,10 @@ export interface FileRoutesById {
   '/contracts': typeof ContractsRoute
   '/custody': typeof CustodyRoute
   '/documents': typeof DocumentsRoute
+  '/reports': typeof ReportsRoute
   '/repository': typeof RepositoryRoute
   '/requests': typeof RequestsRoute
+  '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/violations': typeof ViolationsRoute
 }
@@ -107,8 +125,10 @@ export interface FileRouteTypes {
     | '/contracts'
     | '/custody'
     | '/documents'
+    | '/reports'
     | '/repository'
     | '/requests'
+    | '/settings'
     | '/tasks'
     | '/violations'
   fileRoutesByTo: FileRoutesByTo
@@ -118,8 +138,10 @@ export interface FileRouteTypes {
     | '/contracts'
     | '/custody'
     | '/documents'
+    | '/reports'
     | '/repository'
     | '/requests'
+    | '/settings'
     | '/tasks'
     | '/violations'
   id:
@@ -129,8 +151,10 @@ export interface FileRouteTypes {
     | '/contracts'
     | '/custody'
     | '/documents'
+    | '/reports'
     | '/repository'
     | '/requests'
+    | '/settings'
     | '/tasks'
     | '/violations'
   fileRoutesById: FileRoutesById
@@ -141,8 +165,10 @@ export interface RootRouteChildren {
   ContractsRoute: typeof ContractsRoute
   CustodyRoute: typeof CustodyRoute
   DocumentsRoute: typeof DocumentsRoute
+  ReportsRoute: typeof ReportsRoute
   RepositoryRoute: typeof RepositoryRoute
   RequestsRoute: typeof RequestsRoute
+  SettingsRoute: typeof SettingsRoute
   TasksRoute: typeof TasksRoute
   ViolationsRoute: typeof ViolationsRoute
 }
@@ -184,6 +210,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocumentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/repository': {
       id: '/repository'
       path: '/repository'
@@ -196,6 +229,13 @@ declare module '@tanstack/react-router' {
       path: '/requests'
       fullPath: '/requests'
       preLoaderRoute: typeof RequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tasks': {
@@ -221,11 +261,23 @@ const rootRouteChildren: RootRouteChildren = {
   ContractsRoute: ContractsRoute,
   CustodyRoute: CustodyRoute,
   DocumentsRoute: DocumentsRoute,
+  ReportsRoute: ReportsRoute,
   RepositoryRoute: RepositoryRoute,
   RequestsRoute: RequestsRoute,
+  SettingsRoute: SettingsRoute,
   TasksRoute: TasksRoute,
   ViolationsRoute: ViolationsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
