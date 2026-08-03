@@ -151,23 +151,16 @@ export function CrudTable<T extends Row>({
             <Download className="size-3.5" /> قالب Excel
           </button>
           <button
-            onClick={() => fileRef.current?.click()}
+            onClick={() => {
+              setImportMsg(null);
+              setWizardOpen(true);
+            }}
             title="استيراد سجلات من ملف Excel"
             className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary"
           >
             <Upload className="size-3.5" /> استيراد
           </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void handleImport(f);
-              e.target.value = "";
-            }}
-          />
+
           <button
             onClick={reset}
             title="استعادة البيانات الافتراضية"
