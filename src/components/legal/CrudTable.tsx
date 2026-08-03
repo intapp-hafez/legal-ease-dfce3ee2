@@ -68,15 +68,14 @@ export function CrudTable<T extends Row>({
       const next = [...items];
       let added = 0;
       let updated = 0;
-      let counter = 0;
       for (const r of rows) {
         const merged = { ...emptyRow(fields), ...r } as T;
         let id = String(merged[idKey] ?? "").trim();
         if (!id) {
-          id = nextId([...next, ...Array(counter).fill({})] as Row[], idKey, idPrefix);
-          counter += 1;
+          id = nextId(next as Row[], idKey, idPrefix);
           (merged as Row)[idKey] = id;
         }
+
         const idx = next.findIndex((it) => String(it[idKey]) === id);
         if (idx >= 0) {
           next[idx] = { ...next[idx], ...merged } as T;
