@@ -68,7 +68,7 @@ export function useCollection<T extends Row>(key: string, seed: T[], idKey: keyo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, seed]);
 
-  return { items, hydrated, create, update, remove, reset };
+  return { items, hydrated, create, update, remove, reset, replaceAll };
 }
 
 /** Generates the next sequential code like "DOC-1009" from existing rows. */
