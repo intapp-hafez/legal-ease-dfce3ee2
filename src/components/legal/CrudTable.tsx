@@ -44,12 +44,55 @@ export function CrudTable<T extends Row>({
   addLabel = "إضافة",
   subtitle,
 }: Props<T>) {
-  const { items, create, update, remove, reset } = useCollection<T>(storageKey, seed, idKey);
+  const { items, create, update, remove, reset, replaceAll } = useCollection<T>(
+    storageKey,
+    seed,
+    idKey,
+  );
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Row>(() => emptyRow(fields));
   const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function handleImport(file: File) {
+    setImportMsg(null);
+    try {
+      const rows = await parseWorkbook(file, fields);
+      if (!rows.length) {
+        setImportMsg({ ok: false, text: "لم يتم العثور على صفوف صالحة في الملف." });
+        return;
+      }
+      const next = [...items];
+      let added = 0;
+      let updated = 0;
+      let counter = 0;
+      for (const r of rows) {
+        const merged = { ...emptyRow(fields), ...r } as T;
+        let id = String(merged[idKey] ?? "").trim();
+        if (!id) {
+          id = nextId([...next, ...Array(counter).fill({})] as Row[], idKey, idPrefix);
+          counter += 1;
+          (merged as Row)[idKey] = id;
+        }
+        const idx = next.findIndex((it) => String(it[idKey]) === id);
+        if (idx >= 0) {
+          next[idx] = { ...next[idx], ...merged } as T;
+          updated += 1;
+        } else {
+          next.unshift(merged);
+          added += 1;
+        }
+      }
+      replaceAll(next);
+      setImportMsg({ ok: true, text: `تم الاستيراد: ${added} سجل جديد و${updated} تحديث.` });
+    } catch {
+      setImportMsg({ ok: false, text: "تعذّر قراءة الملف. تأكد أنه بصيغة Excel أو CSV." });
+    }
+  }
+
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
