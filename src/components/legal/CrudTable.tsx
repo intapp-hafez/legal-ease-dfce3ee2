@@ -177,7 +177,19 @@ export function CrudTable<T extends Row>({
         </div>
       }
     >
+      <ImportWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        title={title}
+        fields={fields}
+        items={items}
+        idKey={idKey}
+        idPrefix={idPrefix}
+        onApply={finishImport}
+      />
+
       {importMsg ? (
+
         <div
           className={`mb-3 rounded-lg border px-3 py-2 text-xs ${
             importMsg.ok
