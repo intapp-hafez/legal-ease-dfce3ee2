@@ -114,7 +114,7 @@ export function CrudTable<T extends Row>({
   return (
     <Panel
       title={title}
-      subtitle={subtitle}
+      {...(subtitle ? { subtitle } : {})}
       className={className}
       action={
         <div className="flex items-center gap-2">
