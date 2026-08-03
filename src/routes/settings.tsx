@@ -91,19 +91,32 @@ function SettingsPage() {
       </div>
 
       <div className="mt-5">
-        <Panel title="سجل التدقيق" subtitle="تسجيل كل نشاط داخل النظام">
+        <Panel
+          title="سجل التدقيق"
+          subtitle="تسجيل كل نشاط داخل النظام — بما في ذلك عمليات الاستيراد من Excel"
+          action={
+            <button
+              onClick={clearAudit}
+              className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary"
+            >
+              تفريغ السجل
+            </button>
+          }
+        >
           <DataTable
-            columns={["الوقت", "المستخدم", "الإجراء", "العنصر", "عنوان IP"]}
-            rows={auditLog.map((a) => [
+            columns={["الوقت", "المستخدم", "الإجراء", "العنصر", "النتيجة", "عنوان IP"]}
+            rows={auditEntries.map((a) => [
               <span className="font-mono text-xs text-muted-foreground">{a.time}</span>,
               <span className="font-medium">{a.user}</span>,
               a.action,
               a.target,
+              <span className="text-xs text-muted-foreground">{a.details ?? "—"}</span>,
               <span className="font-mono text-xs">{a.ip}</span>,
             ])}
           />
         </Panel>
       </div>
+
     </PageShell>
   );
 }
