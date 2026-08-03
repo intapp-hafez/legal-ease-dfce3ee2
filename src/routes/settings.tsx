@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, Panel, DataTable, TagList } from "@/components/legal/PageShell";
+import { CrudTable } from "@/components/legal/CrudTable";
 import { BrandingSettings } from "@/components/legal/BrandingSettings";
+
 import { roles, auditLog, reminderSchedule } from "@/lib/legal-data";
 
 const channels = ["إشعار داخل النظام", "بريد إلكتروني", "رسالة SMS", "واتساب (اختياري)", "إشعار تطبيق الجوال"];
@@ -43,12 +45,19 @@ function SettingsPage() {
 
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <Panel title="أدوار المستخدمين والصلاحيات">
-          <DataTable
-            columns={["الدور", "الصلاحيات"]}
-            rows={roles.map((r) => [<span className="font-medium">{r.role}</span>, r.perms])}
-          />
-        </Panel>
+        <CrudTable
+          title="أدوار المستخدمين والصلاحيات"
+          addLabel="دور جديد"
+          storageKey="roles"
+          seed={roles}
+          idKey="role"
+          idPrefix="دور "
+          fields={[
+            { key: "role", label: "الدور", required: true },
+            { key: "perms", label: "الصلاحيات", required: true },
+          ]}
+        />
+
 
         <div className="space-y-5">
           <Panel title="جدول التذكيرات قبل الانتهاء">
