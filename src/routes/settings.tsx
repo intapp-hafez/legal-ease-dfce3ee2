@@ -3,7 +3,9 @@ import { PageShell, Panel, DataTable, TagList } from "@/components/legal/PageShe
 import { CrudTable } from "@/components/legal/CrudTable";
 import { BrandingSettings } from "@/components/legal/BrandingSettings";
 
-import { roles, auditLog, reminderSchedule } from "@/lib/legal-data";
+import { roles, reminderSchedule } from "@/lib/legal-data";
+import { useAuditLog } from "@/lib/audit";
+
 
 const channels = ["إشعار داخل النظام", "بريد إلكتروني", "رسالة SMS", "واتساب (اختياري)", "إشعار تطبيق الجوال"];
 const security = [
