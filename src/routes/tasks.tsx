@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
-import { PageShell, Panel, DataTable, StatusPill, TagList } from "@/components/legal/PageShell";
+import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
+import { CrudTable } from "@/components/legal/CrudTable";
 import { tasks } from "@/lib/legal-data";
 
 const categories = [
@@ -38,47 +38,42 @@ function TasksPage() {
   return (
     <PageShell
       title="المهام القانونية اليومية"
-      description="متابعة مهام الإدارة القانونية بالأولوية وتاريخ الاستحقاق ونسبة الإنجاز."
-      actions={
-        <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
-          <Plus className="size-4" /> مهمة جديدة
-        </button>
-      }
+      description="متابعة مهام الإدارة القانونية — إنشاء وتعديل وحذف المهام."
     >
       <div className="grid gap-5 lg:grid-cols-4">
         <Panel title="تصنيفات المهام" className="lg:col-span-1">
           <TagList items={categories} />
         </Panel>
 
-        <Panel title="قائمة المهام" className="lg:col-span-3">
-          <DataTable
-            columns={[
-              "رقم المهمة",
-              "العنوان",
-              "التصنيف",
-              "الأولوية",
-              "المسؤول",
-              "الاستحقاق",
-              "الإنجاز",
-              "الحالة",
-            ]}
-            rows={tasks.map((t) => [
-              <span className="font-mono text-xs text-muted-foreground">{t.no}</span>,
-              <span className="font-medium">{t.title}</span>,
-              t.category,
-              t.priority,
-              t.assignee,
-              t.due,
-              <div className="flex w-28 items-center gap-2">
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
-                  <div className="h-full rounded-full bg-primary" style={{ width: `${t.progress}%` }} />
-                </div>
-                <span className="text-xs text-muted-foreground">{t.progress}%</span>
-              </div>,
-              <StatusPill value={t.status} />,
-            ])}
-          />
-        </Panel>
+        <CrudTable
+          className="lg:col-span-3"
+          title="قائمة المهام"
+          addLabel="مهمة جديدة"
+          storageKey="tasks"
+          seed={tasks}
+          idKey="no"
+          idPrefix="TSK-"
+          fields={[
+            { key: "no", label: "رقم المهمة", type: "mono", required: true },
+            { key: "title", label: "العنوان", required: true },
+            { key: "category", label: "التصنيف", type: "select", options: categories },
+            {
+              key: "priority",
+              label: "الأولوية",
+              type: "select",
+              options: ["منخفضة", "متوسطة", "عالية", "عاجلة"],
+            },
+            { key: "assignee", label: "المسؤول" },
+            { key: "due", label: "الاستحقاق", type: "date" },
+            { key: "progress", label: "الإنجاز", type: "progress" },
+            {
+              key: "status",
+              label: "الحالة",
+              type: "status",
+              options: ["جديدة", "قيد التنفيذ", "بانتظار", "متأخرة", "مكتملة"],
+            },
+          ]}
+        />
       </div>
     </PageShell>
   );

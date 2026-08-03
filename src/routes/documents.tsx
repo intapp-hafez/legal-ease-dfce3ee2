@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Upload, Download, Printer, Share2 } from "lucide-react";
-import { PageShell, Panel, DataTable, StatusPill, TagList } from "@/components/legal/PageShell";
+import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
+import { CrudTable } from "@/components/legal/CrudTable";
 import { companyDocuments } from "@/lib/legal-data";
 
 const categories = [
@@ -44,61 +44,39 @@ function DocumentsPage() {
   return (
     <PageShell
       title="مستندات الشركة القانونية"
-      description="حفظ وتتبع جميع المستندات الرسمية والتراخيص مع تنبيهات الانتهاء."
-      actions={
-        <>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
-            <Upload className="size-4" /> رفع مستند
-          </button>
-          <button className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-sm text-foreground">
-            <Download className="size-4" /> تصدير
-          </button>
-          <button className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-sm text-foreground">
-            <Printer className="size-4" /> طباعة
-          </button>
-        </>
-      }
+      description="حفظ وتتبع جميع المستندات الرسمية والتراخيص مع إضافة وتعديل وحذف السجلات."
     >
       <div className="grid gap-5 lg:grid-cols-4">
         <Panel title="التصنيفات" className="lg:col-span-1">
           <TagList items={categories} />
         </Panel>
 
-        <Panel
+        <CrudTable
+          className="lg:col-span-3"
           title="سجل المستندات"
           subtitle="رقم المستند، الجهة المُصدِرة، تواريخ الإصدار والانتهاء"
-          className="lg:col-span-3"
-          action={
-            <button className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Share2 className="size-3.5" /> مشاركة
-            </button>
-          }
-        >
-          <DataTable
-            columns={[
-              "رقم المستند",
-              "الاسم",
-              "التصنيف",
-              "الجهة المُصدِرة",
-              "الإصدار",
-              "الانتهاء",
-              "التذكير",
-              "المسؤول",
-              "الحالة",
-            ]}
-            rows={companyDocuments.map((d) => [
-              <span className="font-mono text-xs text-muted-foreground">{d.no}</span>,
-              <span className="font-medium">{d.name}</span>,
-              d.category,
-              d.authority,
-              d.issue,
-              d.expiry,
-              `${d.remind} يوم`,
-              d.owner,
-              <StatusPill value={d.status} />,
-            ])}
-          />
-        </Panel>
+          addLabel="مستند جديد"
+          storageKey="documents"
+          seed={companyDocuments}
+          idKey="no"
+          idPrefix="DOC-"
+          fields={[
+            { key: "no", label: "رقم المستند", type: "mono", required: true },
+            { key: "name", label: "الاسم", required: true },
+            { key: "category", label: "التصنيف", type: "select", options: categories },
+            { key: "authority", label: "الجهة المُصدِرة" },
+            { key: "issue", label: "الإصدار", type: "date" },
+            { key: "expiry", label: "الانتهاء", type: "date" },
+            { key: "remind", label: "التذكير (يوم)", type: "number" },
+            { key: "owner", label: "المسؤول" },
+            {
+              key: "status",
+              label: "الحالة",
+              type: "status",
+              options: ["نشط", "منتهي", "مؤرشف", "قيد المراجعة"],
+            },
+          ]}
+        />
       </div>
     </PageShell>
   );

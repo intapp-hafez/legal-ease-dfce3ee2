@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageShell, Panel, DataTable, StatusPill, TagList } from "@/components/legal/PageShell";
+import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
+import { CrudTable } from "@/components/legal/CrudTable";
 import { requests } from "@/lib/legal-data";
 
 const types = [
@@ -34,7 +35,7 @@ function RequestsPage() {
   return (
     <PageShell
       title="الطلبات القانونية"
-      description="طلبات الموظفين ومسار اعتمادها عبر المدير والموارد البشرية والمستشار القانوني."
+      description="طلبات الموظفين ومسار اعتمادها — إنشاء وتعديل وحذف."
     >
       <Panel title="مسار الاعتماد">
         <ol className="flex flex-wrap items-center gap-2">
@@ -54,19 +55,28 @@ function RequestsPage() {
           <TagList items={types} />
         </Panel>
 
-        <Panel title="الطلبات الواردة" className="lg:col-span-3">
-          <DataTable
-            columns={["رقم الطلب", "الموظف", "نوع الطلب", "التاريخ", "المرحلة الحالية", "الحالة"]}
-            rows={requests.map((r) => [
-              <span className="font-mono text-xs text-muted-foreground">{r.no}</span>,
-              <span className="font-medium">{r.employee}</span>,
-              r.type,
-              r.date,
-              r.stage,
-              <StatusPill value={r.status} />,
-            ])}
-          />
-        </Panel>
+        <CrudTable
+          className="lg:col-span-3"
+          title="الطلبات الواردة"
+          addLabel="طلب جديد"
+          storageKey="requests"
+          seed={requests}
+          idKey="no"
+          idPrefix="RQ-"
+          fields={[
+            { key: "no", label: "رقم الطلب", type: "mono", required: true },
+            { key: "employee", label: "الموظف", required: true },
+            { key: "type", label: "نوع الطلب", type: "select", options: types },
+            { key: "date", label: "التاريخ", type: "date" },
+            { key: "stage", label: "المرحلة الحالية", type: "select", options: workflow },
+            {
+              key: "status",
+              label: "الحالة",
+              type: "status",
+              options: ["جديد", "قيد المعالجة", "مكتمل", "مرفوض"],
+            },
+          ]}
+        />
       </div>
     </PageShell>
   );
