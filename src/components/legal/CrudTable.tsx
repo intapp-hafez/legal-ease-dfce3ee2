@@ -1,9 +1,11 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Download, Pencil, Plus, RotateCcw, Search, Trash2, Upload, X } from "lucide-react";
 import { Panel, StatusPill } from "@/components/legal/PageShell";
+import { ImportWizard, type ImportResult } from "@/components/legal/ImportWizard";
 import { useCollection, nextId, type Row } from "@/lib/crud";
-import { downloadTemplate, parseWorkbook } from "@/lib/excel";
+import { downloadTemplate } from "@/lib/excel";
+import { logAudit, CURRENT_USER } from "@/lib/audit";
 
 export type Field = {
   key: string;
@@ -54,43 +56,23 @@ export function CrudTable<T extends Row>({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Row>(() => emptyRow(fields));
   const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  async function handleImport(file: File) {
-    setImportMsg(null);
-    try {
-      const rows = await parseWorkbook(file, fields);
-      if (!rows.length) {
-        setImportMsg({ ok: false, text: "لم يتم العثور على صفوف صالحة في الملف." });
-        return;
-      }
-      const next = [...items];
-      let added = 0;
-      let updated = 0;
-      for (const r of rows) {
-        const merged = { ...emptyRow(fields), ...r } as T;
-        let id = String(merged[idKey] ?? "").trim();
-        if (!id) {
-          id = nextId(next as Row[], idKey, idPrefix);
-          (merged as Row)[idKey] = id;
-        }
-
-        const idx = next.findIndex((it) => String(it[idKey]) === id);
-        if (idx >= 0) {
-          next[idx] = { ...next[idx], ...merged } as T;
-          updated += 1;
-        } else {
-          next.unshift(merged);
-          added += 1;
-        }
-      }
-      replaceAll(next);
-      setImportMsg({ ok: true, text: `تم الاستيراد: ${added} سجل جديد و${updated} تحديث.` });
-    } catch {
-      setImportMsg({ ok: false, text: "تعذّر قراءة الملف. تأكد أنه بصيغة Excel أو CSV." });
-    }
+  function finishImport(next: T[], r: ImportResult) {
+    replaceAll(next);
+    const summary = `إضافة: ${r.added} • تحديث: ${r.updated} • تخطي: ${r.skipped} • فشل: ${r.failed}`;
+    logAudit({
+      action: `استيراد Excel — ${title}`,
+      target: storageKey,
+      details: summary,
+    });
+    setImportMsg({
+      ok: r.failed === 0,
+      text: `تم الاستيراد بواسطة ${CURRENT_USER} — ${summary} (سُجّلت العملية في سجل التدقيق).`,
+    });
   }
+
 
 
   const filtered = useMemo(() => {
@@ -169,23 +151,16 @@ export function CrudTable<T extends Row>({
             <Download className="size-3.5" /> قالب Excel
           </button>
           <button
-            onClick={() => fileRef.current?.click()}
+            onClick={() => {
+              setImportMsg(null);
+              setWizardOpen(true);
+            }}
             title="استيراد سجلات من ملف Excel"
             className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary"
           >
             <Upload className="size-3.5" /> استيراد
           </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void handleImport(f);
-              e.target.value = "";
-            }}
-          />
+
           <button
             onClick={reset}
             title="استعادة البيانات الافتراضية"
@@ -202,7 +177,19 @@ export function CrudTable<T extends Row>({
         </div>
       }
     >
+      <ImportWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        title={title}
+        fields={fields}
+        items={items}
+        idKey={idKey}
+        idPrefix={idPrefix}
+        onApply={finishImport}
+      />
+
       {importMsg ? (
+
         <div
           className={`mb-3 rounded-lg border px-3 py-2 text-xs ${
             importMsg.ok

@@ -3,7 +3,9 @@ import { PageShell, Panel, DataTable, TagList } from "@/components/legal/PageShe
 import { CrudTable } from "@/components/legal/CrudTable";
 import { BrandingSettings } from "@/components/legal/BrandingSettings";
 
-import { roles, auditLog, reminderSchedule } from "@/lib/legal-data";
+import { roles, reminderSchedule } from "@/lib/legal-data";
+import { useAuditLog } from "@/lib/audit";
+
 
 const channels = ["إشعار داخل النظام", "بريد إلكتروني", "رسالة SMS", "واتساب (اختياري)", "إشعار تطبيق الجوال"];
 const security = [
@@ -34,7 +36,9 @@ export const Route = createFileRoute("/settings")({
 });
 
 function SettingsPage() {
+  const { entries: auditEntries, clear: clearAudit } = useAuditLog();
   return (
+
     <PageShell
       title="الإعدادات"
       description="الهوية البصرية، الأدوار والصلاحيات، قنوات الإشعارات، جدول التذكيرات، وسجل التدقيق."
@@ -87,19 +91,32 @@ function SettingsPage() {
       </div>
 
       <div className="mt-5">
-        <Panel title="سجل التدقيق" subtitle="تسجيل كل نشاط داخل النظام">
+        <Panel
+          title="سجل التدقيق"
+          subtitle="تسجيل كل نشاط داخل النظام — بما في ذلك عمليات الاستيراد من Excel"
+          action={
+            <button
+              onClick={clearAudit}
+              className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary"
+            >
+              تفريغ السجل
+            </button>
+          }
+        >
           <DataTable
-            columns={["الوقت", "المستخدم", "الإجراء", "العنصر", "عنوان IP"]}
-            rows={auditLog.map((a) => [
+            columns={["الوقت", "المستخدم", "الإجراء", "العنصر", "النتيجة", "عنوان IP"]}
+            rows={auditEntries.map((a) => [
               <span className="font-mono text-xs text-muted-foreground">{a.time}</span>,
               <span className="font-medium">{a.user}</span>,
               a.action,
               a.target,
+              <span className="text-xs text-muted-foreground">{a.details ?? "—"}</span>,
               <span className="font-mono text-xs">{a.ip}</span>,
             ])}
           />
         </Panel>
       </div>
+
     </PageShell>
   );
 }
