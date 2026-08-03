@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Pencil, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
+import { Download, Pencil, Plus, RotateCcw, Search, Trash2, Upload, X } from "lucide-react";
 import { Panel, StatusPill } from "@/components/legal/PageShell";
 import { useCollection, nextId, type Row } from "@/lib/crud";
+import { downloadTemplate, parseWorkbook } from "@/lib/excel";
 
 export type Field = {
   key: string;
