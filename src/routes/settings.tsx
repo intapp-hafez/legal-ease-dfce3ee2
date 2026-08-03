@@ -36,7 +36,9 @@ export const Route = createFileRoute("/settings")({
 });
 
 function SettingsPage() {
+  const { entries: auditEntries, clear: clearAudit } = useAuditLog();
   return (
+
     <PageShell
       title="الإعدادات"
       description="الهوية البصرية، الأدوار والصلاحيات، قنوات الإشعارات، جدول التذكيرات، وسجل التدقيق."
