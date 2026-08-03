@@ -160,7 +160,32 @@ export function CrudTable<T extends Row>({
       {...(subtitle ? { subtitle } : {})}
       className={className}
       action={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => downloadTemplate(`قالب-${title}`, fields, items[0])}
+            title="تحميل قالب Excel جاهز"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary"
+          >
+            <Download className="size-3.5" /> قالب Excel
+          </button>
+          <button
+            onClick={() => fileRef.current?.click()}
+            title="استيراد سجلات من ملف Excel"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary"
+          >
+            <Upload className="size-3.5" /> استيراد
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handleImport(f);
+              e.target.value = "";
+            }}
+          />
           <button
             onClick={reset}
             title="استعادة البيانات الافتراضية"
@@ -177,6 +202,18 @@ export function CrudTable<T extends Row>({
         </div>
       }
     >
+      {importMsg ? (
+        <div
+          className={`mb-3 rounded-lg border px-3 py-2 text-xs ${
+            importMsg.ok
+              ? "border-primary/30 bg-primary/10 text-primary-ink"
+              : "border-destructive/30 bg-destructive/10 text-destructive"
+          }`}
+        >
+          {importMsg.text}
+        </div>
+      ) : null}
+
       <div className="mb-4 relative">
         <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <input
@@ -186,6 +223,7 @@ export function CrudTable<T extends Row>({
           placeholder="بحث…"
         />
       </div>
+
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-collapse text-right text-sm">
