@@ -55,6 +55,9 @@ export function useCollection<T extends Row>(key: string, seed: T[], idKey: keyo
     [items, persist, idKey],
   );
 
+  /** Replaces the whole collection (used by bulk Excel import). */
+  const replaceAll = useCallback((next: T[]) => persist(next), [persist]);
+
   const reset = useCallback(() => {
     try {
       window.localStorage.removeItem(PREFIX + key);
