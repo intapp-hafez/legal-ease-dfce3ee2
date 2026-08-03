@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Download } from "lucide-react";
-import { PageShell, Panel, DataTable, StatusPill, TagList } from "@/components/legal/PageShell";
+import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
+import { CrudTable } from "@/components/legal/CrudTable";
 import { contracts, contractWorkflow } from "@/lib/legal-data";
 
 const types = [
@@ -34,17 +34,7 @@ function ContractsPage() {
   return (
     <PageShell
       title="عقود الموظفين"
-      description="كل موظف يمكن أن يمتلك عدة عقود — مع تتبع كامل لدورة الاعتماد والتوقيع."
-      actions={
-        <>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
-            <Plus className="size-4" /> عقد جديد
-          </button>
-          <button className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-sm text-foreground">
-            <Download className="size-4" /> تصدير
-          </button>
-        </>
-      }
+      description="كل موظف يمكن أن يمتلك عدة عقود — مع إضافة وتعديل وحذف كامل للسجلات."
     >
       <Panel title="دورة حياة العقد">
         <ol className="flex flex-wrap items-center gap-2">
@@ -66,34 +56,27 @@ function ContractsPage() {
           <TagList items={types} />
         </Panel>
 
-        <Panel title="سجل العقود" className="lg:col-span-3">
-          <DataTable
-            columns={[
-              "رقم العقد",
-              "الموظف",
-              "الكود",
-              "القسم",
-              "المسمى",
-              "النوع",
-              "البداية",
-              "النهاية",
-              "الراتب",
-              "الحالة",
-            ]}
-            rows={contracts.map((c) => [
-              <span className="font-mono text-xs text-muted-foreground">{c.no}</span>,
-              <span className="font-medium">{c.employee}</span>,
-              c.code,
-              c.dept,
-              c.position,
-              c.type,
-              c.start,
-              c.end,
-              c.salary,
-              <StatusPill value={c.status} />,
-            ])}
-          />
-        </Panel>
+        <CrudTable
+          className="lg:col-span-3"
+          title="سجل العقود"
+          addLabel="عقد جديد"
+          storageKey="contracts"
+          seed={contracts}
+          idKey="no"
+          idPrefix="CT-"
+          fields={[
+            { key: "no", label: "رقم العقد", type: "mono", required: true },
+            { key: "employee", label: "الموظف", required: true },
+            { key: "code", label: "الكود" },
+            { key: "dept", label: "القسم" },
+            { key: "position", label: "المسمى" },
+            { key: "type", label: "النوع", type: "select", options: types },
+            { key: "start", label: "البداية", type: "date" },
+            { key: "end", label: "النهاية", type: "date" },
+            { key: "salary", label: "الراتب" },
+            { key: "status", label: "الحالة", type: "status", options: contractWorkflow },
+          ]}
+        />
       </div>
     </PageShell>
   );

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, QrCode } from "lucide-react";
-import { PageShell, Panel, DataTable, StatusPill, TagList } from "@/components/legal/PageShell";
+import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
+import { CrudTable } from "@/components/legal/CrudTable";
 import { assets } from "@/lib/legal-data";
 
 const categories = [
@@ -23,7 +23,16 @@ const categories = [
   "معدات أخرى",
 ];
 
-const statuses = ["متاحة", "مُسندة", "مُرجعة", "مفقودة", "تالفة", "صيانة", "مستبعدة"];
+const statuses = [
+  "متاحة",
+  "مُسندة",
+  "مُرجعة",
+  "بانتظار الإرجاع",
+  "مفقودة",
+  "تالفة",
+  "صيانة",
+  "مستبعدة",
+];
 
 export const Route = createFileRoute("/custody")({
   head: () => ({
@@ -44,17 +53,7 @@ function CustodyPage() {
   return (
     <PageShell
       title="عهد الموظفين"
-      description="إدارة أصول الشركة المسندة للموظفين مع توقيعات الاستلام والإرجاع."
-      actions={
-        <>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
-            <Plus className="size-4" /> إسناد عهدة
-          </button>
-          <button className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-sm text-foreground">
-            <QrCode className="size-4" /> رمز QR
-          </button>
-        </>
-      }
+      description="إدارة أصول الشركة المسندة للموظفين — إسناد، تعديل، وحذف العهد."
     >
       <div className="grid gap-5 lg:grid-cols-4">
         <div className="space-y-5 lg:col-span-1">
@@ -66,34 +65,32 @@ function CustodyPage() {
           </Panel>
         </div>
 
-        <Panel title="سجل العهد" className="lg:col-span-3">
-          <DataTable
-            columns={[
-              "كود الأصل",
-              "الاسم",
-              "الفئة",
-              "الرقم التسلسلي",
-              "الموظف",
-              "القسم",
-              "تاريخ الإسناد",
-              "الإرجاع المتوقع",
-              "الحالة الفنية",
-              "الحالة",
-            ]}
-            rows={assets.map((a) => [
-              <span className="font-mono text-xs text-muted-foreground">{a.code}</span>,
-              <span className="font-medium">{a.name}</span>,
-              a.category,
-              <span className="font-mono text-xs">{a.serial}</span>,
-              a.employee,
-              a.dept,
-              a.assigned,
-              a.expected,
-              a.condition,
-              <StatusPill value={a.status} />,
-            ])}
-          />
-        </Panel>
+        <CrudTable
+          className="lg:col-span-3"
+          title="سجل العهد"
+          addLabel="إسناد عهدة"
+          storageKey="assets"
+          seed={assets}
+          idKey="code"
+          idPrefix="AST-"
+          fields={[
+            { key: "code", label: "كود الأصل", type: "mono", required: true },
+            { key: "name", label: "الاسم", required: true },
+            { key: "category", label: "الفئة", type: "select", options: categories },
+            { key: "serial", label: "الرقم التسلسلي", type: "mono" },
+            { key: "employee", label: "الموظف" },
+            { key: "dept", label: "القسم" },
+            { key: "assigned", label: "تاريخ الإسناد", type: "date" },
+            { key: "expected", label: "الإرجاع المتوقع", type: "date" },
+            {
+              key: "condition",
+              label: "الحالة الفنية",
+              type: "select",
+              options: ["ممتازة", "جيدة", "مقبولة", "تحتاج إصلاح", "—"],
+            },
+            { key: "status", label: "الحالة", type: "status", options: statuses },
+          ]}
+        />
       </div>
     </PageShell>
   );

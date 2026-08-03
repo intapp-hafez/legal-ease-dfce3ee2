@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
-import { PageShell, Panel, DataTable, StatusPill, TagList } from "@/components/legal/PageShell";
+import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
+import { CrudTable } from "@/components/legal/CrudTable";
 import { violations } from "@/lib/legal-data";
 
 const types = [
@@ -32,32 +32,36 @@ function ViolationsPage() {
   return (
     <PageShell
       title="مخالفات الموظفين"
-      description="توثيق المخالفات التأديبية والقرارات الصادرة بشأنها."
-      actions={
-        <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
-          <Plus className="size-4" /> تسجيل مخالفة
-        </button>
-      }
+      description="توثيق المخالفات التأديبية والقرارات — تسجيل وتعديل وحذف."
     >
       <div className="grid gap-5 lg:grid-cols-4">
         <Panel title="أنواع المخالفات" className="lg:col-span-1">
           <TagList items={types} />
         </Panel>
 
-        <Panel title="السجل التأديبي" className="lg:col-span-3">
-          <DataTable
-            columns={["الرقم", "الموظف", "القسم", "نوع المخالفة", "التاريخ", "القرار", "الحالة"]}
-            rows={violations.map((v) => [
-              <span className="font-mono text-xs text-muted-foreground">{v.no}</span>,
-              <span className="font-medium">{v.employee}</span>,
-              v.dept,
-              v.type,
-              v.date,
-              v.decision,
-              <StatusPill value={v.status} />,
-            ])}
-          />
-        </Panel>
+        <CrudTable
+          className="lg:col-span-3"
+          title="السجل التأديبي"
+          addLabel="تسجيل مخالفة"
+          storageKey="violations"
+          seed={violations}
+          idKey="no"
+          idPrefix="VL-"
+          fields={[
+            { key: "no", label: "الرقم", type: "mono", required: true },
+            { key: "employee", label: "الموظف", required: true },
+            { key: "dept", label: "القسم" },
+            { key: "type", label: "نوع المخالفة", type: "select", options: types },
+            { key: "date", label: "التاريخ", type: "date" },
+            { key: "decision", label: "القرار" },
+            {
+              key: "status",
+              label: "الحالة",
+              type: "status",
+              options: ["مفتوحة", "قيد التحقيق", "مغلقة"],
+            },
+          ]}
+        />
       </div>
     </PageShell>
   );

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
-import { PageShell, Panel, DataTable, StatusPill } from "@/components/legal/PageShell";
+import { PageShell } from "@/components/legal/PageShell";
+import { CrudTable } from "@/components/legal/CrudTable";
 import { cases } from "@/lib/legal-data";
 
 export const Route = createFileRoute("/cases")({
@@ -22,12 +22,7 @@ function CasesPage() {
   return (
     <PageShell
       title="القضايا القانونية"
-      description="متابعة القضايا المرفوعة من الشركة أو ضدها حتى الإغلاق والأرشفة."
-      actions={
-        <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
-          <Plus className="size-4" /> قضية جديدة
-        </button>
-      }
+      description="متابعة القضايا المرفوعة من الشركة أو ضدها — إضافة وتعديل وحذف."
     >
       <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
@@ -43,38 +38,43 @@ function CasesPage() {
         ))}
       </div>
 
-      <Panel title="سجل القضايا">
-        <DataTable
-          columns={[
-            "رقم القضية",
-            "الاسم",
-            "النوع",
-            "الخصم",
-            "المحكمة",
-            "مكتب المحاماة",
-            "المحامي",
-            "البداية",
-            "الجلسة القادمة",
-            "القيمة",
-            "الأولوية",
-            "الحالة",
-          ]}
-          rows={cases.map((c) => [
-            <span className="font-mono text-xs text-muted-foreground">{c.no}</span>,
-            <span className="font-medium">{c.name}</span>,
-            c.type,
-            c.opponent,
-            c.court,
-            c.firm,
-            c.lawyer,
-            c.start,
-            c.hearing,
-            c.value,
-            c.priority,
-            <StatusPill value={c.status} />,
-          ])}
-        />
-      </Panel>
+      <CrudTable
+        title="سجل القضايا"
+        addLabel="قضية جديدة"
+        storageKey="cases"
+        seed={cases}
+        idKey="no"
+        idPrefix="CS-"
+        fields={[
+          { key: "no", label: "رقم القضية", type: "mono", required: true },
+          { key: "name", label: "الاسم", required: true },
+          {
+            key: "type",
+            label: "النوع",
+            type: "select",
+            options: ["تجاري", "عمالي", "مدني", "جنائي", "إداري", "ملكية فكرية"],
+          },
+          { key: "opponent", label: "الخصم" },
+          { key: "court", label: "المحكمة" },
+          { key: "firm", label: "مكتب المحاماة" },
+          { key: "lawyer", label: "المحامي" },
+          { key: "start", label: "البداية", type: "date" },
+          { key: "hearing", label: "الجلسة القادمة", type: "date" },
+          { key: "value", label: "القيمة" },
+          {
+            key: "priority",
+            label: "الأولوية",
+            type: "select",
+            options: ["منخفضة", "متوسطة", "عالية", "عاجلة"],
+          },
+          {
+            key: "status",
+            label: "الحالة",
+            type: "status",
+            options: ["مفتوحة", "قيد التحقيق", "أمام المحكمة", "مغلقة", "مؤرشف"],
+          },
+        ]}
+      />
     </PageShell>
   );
 }
