@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
@@ -30,6 +31,8 @@ export const Route = createFileRoute("/repository")({
 });
 
 function RepositoryPage() {
+  const [featureFilter, setFeatureFilter] = useState("");
+
   return (
     <PageShell
       title="مستودع المستندات"
@@ -37,10 +40,11 @@ function RepositoryPage() {
     >
       <div className="grid gap-5 lg:grid-cols-4">
         <Panel title="خصائص المستودع" className="lg:col-span-1">
-          <TagList items={features} />
+          <TagList items={features} selected={featureFilter} onSelect={setFeatureFilter} />
         </Panel>
 
         <CrudTable
+          filters={{ feature: featureFilter }}
           className="lg:col-span-3"
           title="مجلدات المستودع"
           addLabel="مجلد جديد"
@@ -50,6 +54,7 @@ function RepositoryPage() {
           idPrefix="مجلد "
           fields={[
             { key: "folder", label: "المجلد", required: true },
+            { key: "feature", label: "الخاصية", type: "select", options: features },
             { key: "files", label: "عدد الملفات", type: "number" },
             { key: "size", label: "الحجم" },
             { key: "updated", label: "آخر تحديث", type: "date" },

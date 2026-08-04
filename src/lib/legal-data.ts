@@ -118,15 +118,15 @@ export const requests = [
 ];
 
 export const repository = [
-  { folder: "الشركة", files: 42, size: "310 م.ب", updated: "2026-08-01" },
-  { folder: "الموظفون", files: 186, size: "1.4 ج.ب", updated: "2026-08-02" },
-  { folder: "العقود", files: 214, size: "980 م.ب", updated: "2026-08-02" },
-  { folder: "القضايا القانونية", files: 63, size: "540 م.ب", updated: "2026-07-28" },
-  { folder: "السياسات", files: 19, size: "70 م.ب", updated: "2026-06-11" },
-  { folder: "المستندات الحكومية", files: 51, size: "220 م.ب", updated: "2026-07-19" },
-  { folder: "العهد والأصول", files: 96, size: "180 م.ب", updated: "2026-07-30" },
-  { folder: "النماذج", files: 27, size: "40 م.ب", updated: "2026-05-05" },
-  { folder: "الأرشيف", files: 402, size: "2.1 ج.ب", updated: "2026-04-02" },
+  { folder: "الشركة", files: 42, size: "310 م.ب", updated: "2026-08-01" , feature: "إدارة الإصدارات" },
+  { folder: "الموظفون", files: 186, size: "1.4 ج.ب", updated: "2026-08-02" , feature: "بحث OCR" },
+  { folder: "العقود", files: 214, size: "980 م.ب", updated: "2026-08-02" , feature: "بحث في النص الكامل" },
+  { folder: "القضايا القانونية", files: 63, size: "540 م.ب", updated: "2026-07-28" , feature: "وسوم" },
+  { folder: "السياسات", files: 19, size: "70 م.ب", updated: "2026-06-11" , feature: "تصنيفات" },
+  { folder: "المستندات الحكومية", files: 51, size: "220 م.ب", updated: "2026-07-19" , feature: "معاينة" },
+  { folder: "العهد والأصول", files: 96, size: "180 م.ب", updated: "2026-07-30" , feature: "تنزيل" },
+  { folder: "النماذج", files: 27, size: "40 م.ب", updated: "2026-05-05" , feature: "التحكم في الصلاحيات" },
+  { folder: "الأرشيف", files: 402, size: "2.1 ج.ب", updated: "2026-04-02" , feature: "إدارة الإصدارات" },
 ];
 
 export const contractsByMonth = [
