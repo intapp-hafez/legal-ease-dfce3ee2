@@ -137,14 +137,14 @@ function Dashboard() {
           return (
             <div
               key={k.label}
-              className={`rounded-xl border p-4 shadow-[var(--shadow-panel)] transition-colors ${cardTone[k.tone] ?? cardTone.default}`}
+              className={`rounded-xl border p-4 shadow-[var(--shadow-panel)] transition-colors ${cardTone[k.tone] ?? cardTone['default']}`}
             >
               <span
                 className={`mb-3 inline-flex size-9 items-center justify-center rounded-lg ${toneClass[k.tone]}`}
               >
                 <Icon className="size-4" />
               </span>
-              <p className={`font-display text-2xl font-bold ${valueTone[k.tone] ?? valueTone.default}`}>{k.value}</p>
+              <p className={`font-display text-2xl font-bold ${valueTone[k.tone] ?? valueTone['default']}`}>{k.value}</p>
               <p className="mt-1 text-xs leading-snug text-muted-foreground">{k.label}</p>
             </div>
           );
