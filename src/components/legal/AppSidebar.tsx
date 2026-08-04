@@ -51,7 +51,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
           الوحدات الرئيسية
         </p>
         <ul className="space-y-1">
-          {nav.map(({ to, label, icon: Icon }) => (
+          {visible.map(({ to, label, icon: Icon }) => (
             <li key={to}>
               <Link
                 to={to}
@@ -73,8 +73,8 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="border-t border-sidebar-border px-5 py-4 text-xs text-sidebar-foreground/80">
-        <p className="font-medium text-sidebar-foreground/85">أ. حافظ رحيم</p>
-        <p>المستشار القانوني — Integrated Technics</p>
+        <p className="font-medium text-sidebar-foreground/85">{user?.name ?? "—"}</p>
+        <p>{user ? roleLabel(user.role) : "غير مسجّل"} — Integrated Technics</p>
       </div>
     </aside>
   );
