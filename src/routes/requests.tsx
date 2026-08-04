@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
@@ -32,6 +33,8 @@ export const Route = createFileRoute("/requests")({
 });
 
 function RequestsPage() {
+  const [filter, setFilter] = useState("");
+
   return (
     <PageShell
       title="الطلبات القانونية"
@@ -52,10 +55,11 @@ function RequestsPage() {
 
       <div className="mt-5 grid gap-5 lg:grid-cols-4">
         <Panel title="أنواع الطلبات" className="lg:col-span-1">
-          <TagList items={types} />
+          <TagList items={types} selected={filter} onSelect={setFilter} />
         </Panel>
 
         <CrudTable
+          filters={{ type: filter }}
           className="lg:col-span-3"
           title="الطلبات الواردة"
           addLabel="طلب جديد"
