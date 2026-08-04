@@ -80,12 +80,17 @@ export function CrudTable<T extends Row>({
 
 
   const filtered = useMemo(() => {
+    const active = Object.entries(filters ?? {}).filter(([, v]) => v);
+    let list = items;
+    if (active.length)
+      list = list.filter((it) => active.every(([k, v]) => String(it[k] ?? "") === v));
     const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((it) =>
+    if (!q) return list;
+    return list.filter((it) =>
       Object.values(it).some((v) => String(v).toLowerCase().includes(q)),
     );
-  }, [items, query]);
+  }, [items, query, filters]);
+
 
   function openCreate() {
     setEditingId(null);
