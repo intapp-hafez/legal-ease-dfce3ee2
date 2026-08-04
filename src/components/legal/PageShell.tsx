@@ -141,17 +141,60 @@ export function DataTable({
   );
 }
 
-export function TagList({ items }: { items: string[] }) {
+export function TagList({
+  items,
+  selected,
+  onSelect,
+}: {
+  items: string[];
+  selected?: string;
+  onSelect?: (value: string) => void;
+}) {
+  if (!onSelect) {
+    return (
+      <div className="flex flex-wrap gap-2">
+        {items.map((t) => (
+          <span
+            key={t}
+            className="rounded-md border border-border bg-secondary px-2.5 py-1 text-xs text-secondary-foreground"
+          >
+            {t}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-wrap gap-2">
-      {items.map((t) => (
-        <span
-          key={t}
-          className="rounded-md border border-border bg-secondary px-2.5 py-1 text-xs text-secondary-foreground"
+      {items.map((t) => {
+        const active = selected === t;
+        return (
+          <button
+            key={t}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onSelect(active ? "" : t)}
+            className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+              active
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-secondary text-secondary-foreground hover:border-primary/40 hover:bg-primary/10"
+            }`}
+          >
+            {t}
+          </button>
+        );
+      })}
+      {selected ? (
+        <button
+          type="button"
+          onClick={() => onSelect("")}
+          className="rounded-md border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-secondary"
         >
-          {t}
-        </span>
-      ))}
+          مسح التصفية
+        </button>
+      ) : null}
     </div>
   );
 }
+
