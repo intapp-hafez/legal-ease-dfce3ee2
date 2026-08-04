@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, Panel, DataTable, TagList } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { BrandingSettings } from "@/components/legal/BrandingSettings";
+import { AccessControl } from "@/components/legal/AccessControl";
 
 import { roles, reminderSchedule } from "@/lib/legal-data";
 import { useAuditLog } from "@/lib/audit";
@@ -44,8 +45,13 @@ function SettingsPage() {
       description="الهوية البصرية، الأدوار والصلاحيات، قنوات الإشعارات، جدول التذكيرات، وسجل التدقيق."
     >
       <div className="mb-5">
+        <AccessControl />
+      </div>
+
+      <div className="mb-5">
         <BrandingSettings />
       </div>
+
 
 
       <div className="grid gap-5 lg:grid-cols-2">

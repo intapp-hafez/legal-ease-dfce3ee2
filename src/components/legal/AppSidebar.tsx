@@ -13,25 +13,29 @@ import {
   Settings,
 } from "lucide-react";
 import { useBranding } from "@/lib/branding";
+import { useAuth, roleLabel, type ModuleId } from "@/lib/auth";
 
 const nav = [
-  { to: "/", label: "لوحة المعلومات", icon: LayoutDashboard },
-  { to: "/documents", label: "مستندات الشركة", icon: FolderLock },
-  { to: "/contracts", label: "عقود الموظفين", icon: FileSignature },
-  { to: "/custody", label: "عهد الموظفين", icon: PackageSearch },
-  { to: "/cases", label: "القضايا القانونية", icon: Gavel },
-  { to: "/tasks", label: "المهام اليومية", icon: ListChecks },
-  { to: "/violations", label: "مخالفات الموظفين", icon: ShieldAlert },
-  { to: "/requests", label: "الطلبات القانونية", icon: Inbox },
-  { to: "/repository", label: "مستودع المستندات", icon: Archive },
-  { to: "/reports", label: "التقارير", icon: BarChart3 },
-  { to: "/settings", label: "الإعدادات", icon: Settings },
-] as const;
+  { to: "/", id: "dashboard", label: "لوحة المعلومات", icon: LayoutDashboard },
+  { to: "/documents", id: "documents", label: "مستندات الشركة", icon: FolderLock },
+  { to: "/contracts", id: "contracts", label: "عقود الموظفين", icon: FileSignature },
+  { to: "/custody", id: "custody", label: "عهد الموظفين", icon: PackageSearch },
+  { to: "/cases", id: "cases", label: "القضايا القانونية", icon: Gavel },
+  { to: "/tasks", id: "tasks", label: "المهام اليومية", icon: ListChecks },
+  { to: "/violations", id: "violations", label: "مخالفات الموظفين", icon: ShieldAlert },
+  { to: "/requests", id: "requests", label: "الطلبات القانونية", icon: Inbox },
+  { to: "/repository", id: "repository", label: "مستودع المستندات", icon: Archive },
+  { to: "/reports", id: "reports", label: "التقارير", icon: BarChart3 },
+  { to: "/settings", id: "settings", label: "الإعدادات", icon: Settings },
+] as const satisfies readonly { to: string; id: ModuleId; label: string; icon: unknown }[];
 
 export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { branding } = useBranding();
+  const { can, user } = useAuth();
+  const visible = nav.filter((n) => can(n.id));
   return (
     <aside className="flex h-full w-[264px] shrink-0 flex-col bg-sidebar text-sidebar-foreground">
+
       <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
         <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-card p-1">
           <img src={branding.logoUrl} alt="شعار Integrated Technics" className="h-full w-full object-contain" />
@@ -47,7 +51,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
           الوحدات الرئيسية
         </p>
         <ul className="space-y-1">
-          {nav.map(({ to, label, icon: Icon }) => (
+          {visible.map(({ to, label, icon: Icon }) => (
             <li key={to}>
               <Link
                 to={to}
@@ -69,8 +73,8 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="border-t border-sidebar-border px-5 py-4 text-xs text-sidebar-foreground/80">
-        <p className="font-medium text-sidebar-foreground/85">أ. حافظ رحيم</p>
-        <p>المستشار القانوني — Integrated Technics</p>
+        <p className="font-medium text-sidebar-foreground/85">{user?.name ?? "—"}</p>
+        <p>{user ? roleLabel(user.role) : "غير مسجّل"} — Integrated Technics</p>
       </div>
     </aside>
   );
