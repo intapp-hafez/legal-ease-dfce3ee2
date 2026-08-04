@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
@@ -50,6 +51,9 @@ export const Route = createFileRoute("/custody")({
 });
 
 function CustodyPage() {
+  const [catFilter, setCatFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
   return (
     <PageShell
       title="عهد الموظفين"
@@ -58,14 +62,15 @@ function CustodyPage() {
       <div className="grid gap-5 lg:grid-cols-4">
         <div className="space-y-5 lg:col-span-1">
           <Panel title="فئات الأصول">
-            <TagList items={categories} />
+            <TagList items={categories} selected={catFilter} onSelect={setCatFilter} />
           </Panel>
           <Panel title="حالات العهدة">
-            <TagList items={statuses} />
+            <TagList items={statuses} selected={statusFilter} onSelect={setStatusFilter} />
           </Panel>
         </div>
 
         <CrudTable
+          filters={{ category: catFilter, status: statusFilter }}
           className="lg:col-span-3"
           title="سجل العهد"
           addLabel="إسناد عهدة"
