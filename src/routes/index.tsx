@@ -70,10 +70,24 @@ const icons: Record<string, React.ComponentType<{ className?: string }>> = {
 };
 
 const toneClass: Record<string, string> = {
-  default: "bg-primary/10 text-primary",
-  success: "bg-success/12 text-success",
-  warning: "bg-warning/15 text-[var(--warning-ink)]",
-  danger: "bg-destructive/12 text-destructive",
+  default: "bg-primary/15 text-[var(--primary-ink)]",
+  success: "bg-success/20 text-success",
+  warning: "bg-warning/25 text-[var(--warning-ink)]",
+  danger: "bg-destructive/18 text-destructive",
+};
+
+const cardTone: Record<string, string> = {
+  default: "border-primary/25 bg-primary/8",
+  success: "border-success/25 bg-success/10",
+  warning: "border-warning/30 bg-warning/12",
+  danger: "border-destructive/25 bg-destructive/8",
+};
+
+const valueTone: Record<string, string> = {
+  default: "text-[var(--primary-ink)]",
+  success: "text-success",
+  warning: "text-[var(--warning-ink)]",
+  danger: "text-destructive",
 };
 
 const chartColors = [
@@ -123,14 +137,14 @@ function Dashboard() {
           return (
             <div
               key={k.label}
-              className="rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-panel)]"
+              className={`rounded-xl border p-4 shadow-[var(--shadow-panel)] transition-colors ${cardTone[k.tone] ?? cardTone.default}`}
             >
               <span
                 className={`mb-3 inline-flex size-9 items-center justify-center rounded-lg ${toneClass[k.tone]}`}
               >
                 <Icon className="size-4" />
               </span>
-              <p className="font-display text-2xl font-bold text-card-foreground">{k.value}</p>
+              <p className={`font-display text-2xl font-bold ${valueTone[k.tone] ?? valueTone.default}`}>{k.value}</p>
               <p className="mt-1 text-xs leading-snug text-muted-foreground">{k.label}</p>
             </div>
           );
