@@ -27,6 +27,8 @@ type Props<T extends Row> = {
   addLabel?: string;
   subtitle?: string;
   extraActions?: ReactNode;
+  /** Optional external filters, e.g. { category: "رخصة استيراد" }. Empty values are ignored. */
+  filters?: Record<string, string>;
 };
 
 function emptyRow(fields: Field[]): Row {
@@ -45,7 +47,9 @@ export function CrudTable<T extends Row>({
   className = "",
   addLabel = "إضافة",
   subtitle,
+  filters,
 }: Props<T>) {
+
   const { items, create, update, remove, reset, replaceAll } = useCollection<T>(
     storageKey,
     seed,
