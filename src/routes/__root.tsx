@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -13,6 +14,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppLayout } from "../components/legal/AppLayout";
 import { BrandingProvider } from "../lib/branding";
+import { AuthProvider, useAuth, MODULES } from "../lib/auth";
+import { LoginScreen } from "../components/legal/LoginScreen";
 
 function NotFoundComponent() {
   return (
