@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Bell, Menu, Search, X } from "lucide-react";
+import { Bell, LogOut, Menu, Search, X } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
+import { useAuth, roleLabel } from "@/lib/auth";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
