@@ -5,6 +5,7 @@ import { useAuth, roleLabel } from "@/lib/auth";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const { user, logout } = useAuth();
 
   return (
     <div className="flex min-h-screen w-full bg-background">
