@@ -44,8 +44,13 @@ function SettingsPage() {
       description="الهوية البصرية، الأدوار والصلاحيات، قنوات الإشعارات، جدول التذكيرات، وسجل التدقيق."
     >
       <div className="mb-5">
+        <AccessControl />
+      </div>
+
+      <div className="mb-5">
         <BrandingSettings />
       </div>
+
 
 
       <div className="grid gap-5 lg:grid-cols-2">
