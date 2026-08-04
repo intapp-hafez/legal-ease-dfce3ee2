@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, Panel, DataTable, TagList } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { BrandingSettings } from "@/components/legal/BrandingSettings";
+import { AccessControl } from "@/components/legal/AccessControl";
 
 import { roles, reminderSchedule } from "@/lib/legal-data";
 import { useAuditLog } from "@/lib/audit";
