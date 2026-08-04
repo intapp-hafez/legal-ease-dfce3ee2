@@ -128,16 +128,45 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function AuthGate() {
+  const { ready, user, can } = useAuth();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  if (!ready) return null;
+  if (!user) return <LoginScreen />;
+
+  const mod = MODULES.find((m) => m.path === pathname) ?? MODULES.find((m) => m.path !== "/" && pathname.startsWith(m.path));
+
+  if (mod && !can(mod.id)) {
+    return (
+      <AppLayout>
+        <div className="mx-auto w-full max-w-[1400px] px-5 py-16 text-center md:px-8">
+          <h1 className="font-display text-2xl font-bold text-foreground">لا تملك صلاحية الوصول</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            وحدة «{mod.label}» غير متاحة لدورك الحالي. تواصل مع مدير النظام لتعديل الصلاحيات.
+          </p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
+      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+      <Outlet />
+    </AppLayout>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
       <BrandingProvider>
-        <AppLayout>
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
-        </AppLayout>
+        <AuthProvider>
+          <AuthGate />
+        </AuthProvider>
       </BrandingProvider>
     </QueryClientProvider>
   );
