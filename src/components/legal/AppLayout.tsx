@@ -55,10 +55,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
           <div className="hidden items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 sm:flex">
             <span className="flex size-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-              ح
+              {user?.name?.trim()?.[0] ?? "؟"}
             </span>
-            <span className="text-xs text-foreground">أ. حافظ رحيم</span>
+            <span className="text-xs text-foreground">{user?.name ?? "زائر"}</span>
+            <span className="text-[11px] text-muted-foreground">
+              {user ? roleLabel(user.role) : ""}
+            </span>
           </div>
+
+          <button
+            onClick={logout}
+            className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-2 text-xs text-muted-foreground hover:bg-secondary"
+            aria-label="تسجيل الخروج"
+          >
+            <LogOut className="size-4" />
+            <span className="hidden sm:inline">خروج</span>
+          </button>
         </header>
 
         <main className="flex-1">{children}</main>
