@@ -38,7 +38,7 @@ function normalizeArabicSearch(value: string) {
     .toLocaleLowerCase("ar")
     .replace(/[أإآ]/g, "ا")
     .replace(/ة/g, "ه")
-    .replace(/\bال/g, "")
+    .replace(/(^|\s)ال/g, "$1")
     .replace(/[ً-ْ]/g, "");
 }
 
