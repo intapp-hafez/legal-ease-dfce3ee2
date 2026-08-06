@@ -32,6 +32,16 @@ const emptyUser = (): User => ({
   active: true,
 });
 
+function normalizeArabicSearch(value: string) {
+  return value
+    .trim()
+    .toLocaleLowerCase("ar")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/\bال/g, "")
+    .replace(/[ً-ْ]/g, "");
+}
+
 export function AccessControl() {
   const { users, matrix, saveUser, removeUser, setPerm, resetAccess, user } = useAuth();
   const canManage = user?.role === "super_admin";
@@ -41,8 +51,9 @@ export function AccessControl() {
   const [permissionSearch, setPermissionSearch] = useState("");
   const [permissionSort, setPermissionSort] = useState<"default" | "name" | "enabled" | "disabled">("default");
 
+  const normalizedPermissionSearch = normalizeArabicSearch(permissionSearch);
   const visibleModules = MODULES.filter((module) =>
-    module.label.toLocaleLowerCase("ar").includes(permissionSearch.trim().toLocaleLowerCase("ar")),
+    normalizeArabicSearch(module.label).includes(normalizedPermissionSearch),
   ).sort((a, b) => {
     if (permissionSort === "name") return a.label.localeCompare(b.label, "ar");
     if (permissionSort === "enabled" || permissionSort === "disabled") {
