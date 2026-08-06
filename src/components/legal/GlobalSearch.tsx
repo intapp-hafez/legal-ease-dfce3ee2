@@ -1,6 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { ArrowUpLeft, FileSearch, Search, SlidersHorizontal, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import {
+  ArrowUpLeft,
+  Clock,
+  CornerDownLeft,
+  FileSearch,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useAuth, type ModuleId } from "@/lib/auth";
 import {
   assets,
@@ -38,6 +48,17 @@ type SearchResult = {
   date: string;
 };
 
+type SavedSearch = {
+  query: string;
+  moduleFilter: "all" | ModuleId;
+  typeFilter: string;
+  fromDate: string;
+  toDate: string;
+  at: number;
+};
+
+const HISTORY_KEY = "int-legal:search-history";
+
 const sources: SearchSource[] = [
   { module: "documents", label: "مستندات الشركة", path: "/documents", storageKey: "documents", seed: companyDocuments, titleKeys: ["name", "category"], idKeys: ["no"], typeKeys: ["category"], dateKeys: ["expiry", "issue"] },
   { module: "contracts", label: "عقود الموظفين", path: "/contracts", storageKey: "contracts", seed: contracts, titleKeys: ["employee", "type"], idKeys: ["no", "code"], typeKeys: ["type"], dateKeys: ["start", "end"] },
@@ -72,6 +93,17 @@ function readRows(source: SearchSource): Row[] {
   }
 }
 
+function readHistory(): SavedSearch[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(HISTORY_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? (parsed as SavedSearch[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 function firstValue(row: Row, keys: string[]) {
   for (const key of keys) {
     const value = String(row[key] ?? "").trim();
@@ -92,10 +124,22 @@ function rowDate(row: Row, keys: string[]) {
   return "";
 }
 
+function describeSaved(item: SavedSearch) {
+  const bits: string[] = [];
+  if (item.moduleFilter !== "all") {
+    bits.push(sources.find((s) => s.module === item.moduleFilter)?.label ?? item.moduleFilter);
+  }
+  if (item.typeFilter) bits.push(item.typeFilter);
+  if (item.fromDate || item.toDate) bits.push(`${item.fromDate || "…"} → ${item.toDate || "…"}`);
+  return bits.join(" • ");
+}
+
 export function GlobalSearch() {
   const { can } = useAuth();
+  const navigate = useNavigate();
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -103,6 +147,12 @@ export function GlobalSearch() {
   const [typeFilter, setTypeFilter] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [history, setHistory] = useState<SavedSearch[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    setHistory(readHistory());
+  }, []);
 
   const allowedSources = useMemo(() => sources.filter((s) => can(s.module)), [can]);
 
@@ -160,6 +210,112 @@ export function GlobalSearch() {
     return matches.slice(0, 30);
   }, [query, scanned, typeFilter, fromDate, toDate, activeFilters]);
 
+  // اقتراحات تلقائية من عناوين الوثائق والقضايا والأسماء
+  const suggestions = useMemo(() => {
+    const q = normalize(query);
+    if (!q) return [];
+    const set = new Set<string>();
+    for (const { source, row } of scanned) {
+      for (const key of [...source.titleKeys, ...source.idKeys]) {
+        const value = String(row[key] ?? "").trim();
+        if (!value || value === "—") continue;
+        const n = normalize(value);
+        if (n.includes(q) && n !== q) set.add(value);
+        if (set.size > 40) break;
+      }
+    }
+    return Array.from(set).slice(0, 6);
+  }, [query, scanned]);
+
+  const recents = query.trim() ? [] : history.slice(0, 6);
+
+  type Item =
+    | { kind: "recent"; saved: SavedSearch }
+    | { kind: "suggestion"; text: string }
+    | { kind: "result"; result: SearchResult };
+
+  const items: Item[] = useMemo(
+    () => [
+      ...recents.map((saved) => ({ kind: "recent" as const, saved })),
+      ...suggestions.map((text) => ({ kind: "suggestion" as const, text })),
+      ...results.map((result) => ({ kind: "result" as const, result })),
+    ],
+    [recents, suggestions, results],
+  );
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [query, moduleFilter, typeFilter, fromDate, toDate, open]);
+
+  useEffect(() => {
+    const node = listRef.current?.querySelector<HTMLElement>('[data-active="true"]');
+    node?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, items.length]);
+
+  const saveSearch = useCallback(
+    (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed && !activeFilters) return;
+      const entry: SavedSearch = {
+        query: trimmed,
+        moduleFilter,
+        typeFilter,
+        fromDate,
+        toDate,
+        at: Date.now(),
+      };
+      setHistory((prev) => {
+        const next = [
+          entry,
+          ...prev.filter(
+            (p) =>
+              !(
+                p.query === entry.query &&
+                p.moduleFilter === entry.moduleFilter &&
+                p.typeFilter === entry.typeFilter &&
+                p.fromDate === entry.fromDate &&
+                p.toDate === entry.toDate
+              ),
+          ),
+        ].slice(0, 8);
+        try {
+          window.localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+        } catch {
+          /* ignore */
+        }
+        return next;
+      });
+    },
+    [activeFilters, moduleFilter, typeFilter, fromDate, toDate],
+  );
+
+  function clearHistory() {
+    setHistory([]);
+    try {
+      window.localStorage.removeItem(HISTORY_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function applySaved(saved: SavedSearch) {
+    setQuery(saved.query);
+    setModuleFilter(saved.moduleFilter);
+    setTypeFilter(saved.typeFilter);
+    setFromDate(saved.fromDate);
+    setToDate(saved.toDate);
+    setOpen(true);
+    if (saved.typeFilter || saved.fromDate || saved.toDate || saved.moduleFilter !== "all") setShowFilters(true);
+    inputRef.current?.focus();
+  }
+
+  function openResult(result: SearchResult) {
+    saveSearch(query);
+    setOpen(false);
+    setQuery("");
+    void navigate({ to: result.path });
+  }
+
   useEffect(() => {
     function closeOnOutside(event: MouseEvent) {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
@@ -172,7 +328,10 @@ export function GlobalSearch() {
         inputRef.current?.select();
         return;
       }
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        inputRef.current?.blur();
+      }
     }
     document.addEventListener("mousedown", closeOnOutside);
     document.addEventListener("keydown", onKeyDown);
@@ -181,6 +340,42 @@ export function GlobalSearch() {
       document.removeEventListener("keydown", onKeyDown);
     };
   }, []);
+
+  function onInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      if (!items.length) return;
+      event.preventDefault();
+      setOpen(true);
+      setActiveIndex((i) => {
+        const next = event.key === "ArrowDown" ? i + 1 : i - 1;
+        return (next + items.length) % items.length;
+      });
+      return;
+    }
+    if (event.key === "Home" && items.length) {
+      event.preventDefault();
+      setActiveIndex(0);
+      return;
+    }
+    if (event.key === "End" && items.length) {
+      event.preventDefault();
+      setActiveIndex(items.length - 1);
+      return;
+    }
+    if (event.key === "Enter") {
+      const item = items[activeIndex];
+      if (!item) {
+        saveSearch(query);
+        return;
+      }
+      event.preventDefault();
+      if (item.kind === "recent") applySaved(item.saved);
+      else if (item.kind === "suggestion") {
+        setQuery(item.text);
+        setOpen(true);
+      } else openResult(item.result);
+    }
+  }
 
   function clear() {
     setQuery("");
@@ -194,7 +389,12 @@ export function GlobalSearch() {
     setToDate("");
   }
 
-  const panelOpen = open && (Boolean(query.trim()) || activeFilters > 0 || showFilters);
+  const panelOpen =
+    open && (Boolean(query.trim()) || activeFilters > 0 || showFilters || recents.length > 0);
+
+  const rowBase =
+    "group flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-right focus:outline-none";
+  const activeCls = "bg-secondary ring-1 ring-ring/40";
 
   return (
     <div ref={rootRef} className="relative min-w-0 flex-1 max-w-xl">
@@ -207,12 +407,14 @@ export function GlobalSearch() {
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
+        onKeyDown={onInputKeyDown}
         className="h-10 w-full rounded-lg border border-border bg-card pr-9 pl-24 text-sm outline-none transition-shadow placeholder:text-muted-foreground focus:ring-2 focus:ring-ring/40"
         placeholder="بحث شامل: موظف، رقم عقد، مستند، قضية، رقم عهدة…"
         aria-label="البحث الشامل"
         role="combobox"
         aria-expanded={panelOpen}
         aria-controls="global-search-results"
+        aria-activedescendant={panelOpen && items.length ? `gs-item-${activeIndex}` : undefined}
         autoComplete="off"
       />
 
@@ -252,6 +454,7 @@ export function GlobalSearch() {
       {panelOpen ? (
         <div
           id="global-search-results"
+          role="listbox"
           className="absolute inset-x-0 top-12 z-50 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
         >
           {showFilters ? (
@@ -316,37 +519,128 @@ export function GlobalSearch() {
             </div>
           ) : null}
 
-          <div className="flex items-center justify-between border-b border-border px-3 py-2 text-xs text-muted-foreground">
-            <span>نتائج البحث</span>
-            <span>{results.length} نتيجة</span>
+          <div ref={listRef} className="max-h-[min(460px,68vh)] overflow-y-auto">
+            {recents.length ? (
+              <div className="border-b border-border p-1.5">
+                <div className="flex items-center justify-between px-2 py-1 text-[11px] text-muted-foreground">
+                  <span>عمليات بحث سابقة</span>
+                  <button
+                    type="button"
+                    onClick={clearHistory}
+                    className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-secondary hover:text-foreground"
+                  >
+                    <Trash2 className="size-3" />
+                    مسح السجل
+                  </button>
+                </div>
+                {recents.map((saved, i) => {
+                  const isActive = activeIndex === i;
+                  return (
+                    <button
+                      key={`${saved.at}-${i}`}
+                      id={`gs-item-${i}`}
+                      role="option"
+                      aria-selected={isActive}
+                      data-active={isActive}
+                      type="button"
+                      onMouseEnter={() => setActiveIndex(i)}
+                      onClick={() => applySaved(saved)}
+                      className={`${rowBase} ${isActive ? activeCls : "hover:bg-secondary"}`}
+                    >
+                      <Clock className="size-4 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm text-card-foreground">
+                          {saved.query || "بحث بالمرشحات فقط"}
+                        </span>
+                        {describeSaved(saved) ? (
+                          <span className="block truncate text-xs text-muted-foreground">{describeSaved(saved)}</span>
+                        ) : null}
+                      </span>
+                      <CornerDownLeft className="size-3.5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {suggestions.length ? (
+              <div className="border-b border-border p-1.5">
+                <div className="px-2 py-1 text-[11px] text-muted-foreground">اقتراحات</div>
+                {suggestions.map((text, i) => {
+                  const index = recents.length + i;
+                  const isActive = activeIndex === index;
+                  return (
+                    <button
+                      key={text}
+                      id={`gs-item-${index}`}
+                      role="option"
+                      aria-selected={isActive}
+                      data-active={isActive}
+                      type="button"
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onClick={() => {
+                        setQuery(text);
+                        inputRef.current?.focus();
+                      }}
+                      className={`${rowBase} py-2 ${isActive ? activeCls : "hover:bg-secondary"}`}
+                    >
+                      <Sparkles className="size-4 shrink-0 text-[var(--primary-ink)]" />
+                      <span className="min-w-0 flex-1 truncate text-sm text-card-foreground">{text}</span>
+                      <span className="shrink-0 text-[10px] text-muted-foreground">تعبئة</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            <div className="flex items-center justify-between border-b border-border px-3 py-2 text-xs text-muted-foreground">
+              <span>نتائج البحث</span>
+              <span>{results.length} نتيجة</span>
+            </div>
+
+            {results.length ? (
+              <div className="p-1.5">
+                {results.map((result, i) => {
+                  const index = recents.length + suggestions.length + i;
+                  const isActive = activeIndex === index;
+                  return (
+                    <button
+                      key={result.key}
+                      id={`gs-item-${index}`}
+                      role="option"
+                      aria-selected={isActive}
+                      data-active={isActive}
+                      type="button"
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onClick={() => openResult(result)}
+                      className={`${rowBase} ${isActive ? activeCls : "hover:bg-secondary"}`}
+                    >
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/12 text-[var(--primary-ink)]">
+                        <FileSearch className="size-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-card-foreground">{result.title}</span>
+                        <span className="block truncate text-xs text-muted-foreground">{result.detail}</span>
+                      </span>
+                      <ArrowUpLeft className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="px-4 py-8 text-center">
+                <FileSearch className="mx-auto size-6 text-muted-foreground" />
+                <p className="mt-2 text-sm text-card-foreground">لا توجد نتائج مطابقة</p>
+                <p className="mt-1 text-xs text-muted-foreground">جرّب الاسم أو الرقم أو وسّع نطاق التاريخ</p>
+              </div>
+            )}
           </div>
-          {results.length ? (
-            <div className="max-h-[min(420px,65vh)] overflow-y-auto p-1.5">
-              {results.map((result) => (
-                <Link
-                  key={result.key}
-                  to={result.path}
-                  onClick={clear}
-                  className="group flex items-center gap-3 rounded-md px-3 py-2.5 hover:bg-secondary focus:bg-secondary focus:outline-none"
-                >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/12 text-[var(--primary-ink)]">
-                    <FileSearch className="size-4" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-card-foreground">{result.title}</span>
-                    <span className="block truncate text-xs text-muted-foreground">{result.detail}</span>
-                  </span>
-                  <ArrowUpLeft className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="px-4 py-8 text-center">
-              <FileSearch className="mx-auto size-6 text-muted-foreground" />
-              <p className="mt-2 text-sm text-card-foreground">لا توجد نتائج مطابقة</p>
-              <p className="mt-1 text-xs text-muted-foreground">جرّب الاسم أو الرقم أو وسّع نطاق التاريخ</p>
-            </div>
-          )}
+
+          <div className="flex items-center gap-3 border-t border-border px-3 py-1.5 text-[10px] text-muted-foreground">
+            <span>↑ ↓ للتنقل</span>
+            <span>Enter للفتح</span>
+            <span>Esc للإغلاق</span>
+          </div>
         </div>
       ) : null}
     </div>
