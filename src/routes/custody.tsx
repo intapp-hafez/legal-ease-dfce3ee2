@@ -82,6 +82,15 @@ export const Route = createFileRoute("/custody")({
 function CustodyPage() {
   const [catFilter, setCatFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const { options: categories, add: addCategory } = useCustomOptions(
+    "custody-extra-categories",
+    baseCategories,
+  );
+  const { options: statuses, add: addStatus } = useCustomOptions(
+    "custody-extra-statuses",
+    baseStatuses,
+  );
+  const hasFilters = !!catFilter || !!statusFilter;
 
   return (
     <PageShell
@@ -90,43 +99,42 @@ function CustodyPage() {
     >
       <div className="space-y-5">
         <Panel title="تصفية العهد">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block text-sm">
-              <span className="mb-1 block text-xs font-medium text-muted-foreground">
-                فئة الأصل
-              </span>
-              <select
-                value={catFilter}
-                onChange={(e) => setCatFilter(e.target.value)}
-                className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+          <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto]">
+            <SearchSelect
+              label="فئة الأصل"
+              allLabel="كل الفئات"
+              value={catFilter}
+              onChange={setCatFilter}
+              options={categories}
+              onAddOption={addCategory}
+              addLabel="إضافة فئة جديدة"
+            />
+            <SearchSelect
+              label="حالة العهدة"
+              allLabel="كل الحالات"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={statuses}
+              onAddOption={addStatus}
+              addLabel="إضافة حالة جديدة"
+            />
+            <div className="flex items-end">
+              <button
+                type="button"
+                disabled={!hasFilters}
+                onClick={() => {
+                  setCatFilter("");
+                  setStatusFilter("");
+                }}
+                className="flex h-10 items-center gap-2 rounded-lg border border-border bg-background px-3 text-sm outline-none hover:bg-muted focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
               >
-                <option value="">كل الفئات</option>
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1 block text-xs font-medium text-muted-foreground">
-                حالة العهدة
-              </span>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-              >
-                <option value="">كل الحالات</option>
-                {statuses.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <RotateCcw className="h-4 w-4" />
+                تصفير الفلاتر
+              </button>
+            </div>
           </div>
         </Panel>
+
 
         <CrudTable
           filters={{ category: catFilter, status: statusFilter }}
