@@ -1,68 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { RotateCcw } from "lucide-react";
 import { PageShell, Panel } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { SearchSelect } from "@/components/legal/SearchSelect";
 import { assets } from "@/lib/legal-data";
-
-
-const baseCategories = [
-  "لابتوب",
-  "جهاز مكتبي",
-  "شاشة",
-  "هاتف محمول",
-  "تابلت",
-  "شريحة اتصال",
-  "طابعة",
-  "ماسح ضوئي",
-  "مركبة",
-  "مفاتيح مكتب",
-  "بطاقة دخول",
-  "راوتر",
-  "سماعة رأس",
-  "بطارية متنقلة",
-  "توكن USB",
-  "مفتاح أمان",
-  "معدات أخرى",
-];
-
-const baseStatuses = [
-  "متاحة",
-  "مُسندة",
-  "مُرجعة",
-  "بانتظار الإرجاع",
-  "مفقودة",
-  "تالفة",
-  "صيانة",
-  "مستبعدة",
-];
-
-function useCustomOptions(key: string, base: string[]) {
-  const [extra, setExtra] = useState<string[]>([]);
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw) setExtra(JSON.parse(raw));
-    } catch {
-      /* ignore */
-    }
-  }, [key]);
-  const add = (v: string) => {
-    setExtra((prev) => {
-      if (base.includes(v) || prev.includes(v)) return prev;
-      const next = [...prev, v];
-      try {
-        localStorage.setItem(key, JSON.stringify(next));
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  };
-  return { options: [...base, ...extra], add };
-}
-
+import { useCategories, useStatuses } from "@/lib/custody-options";
 
 export const Route = createFileRoute("/custody")({
   head: () => ({
@@ -82,14 +25,9 @@ export const Route = createFileRoute("/custody")({
 function CustodyPage() {
   const [catFilter, setCatFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const { options: categories, add: addCategory } = useCustomOptions(
-    "custody-extra-categories",
-    baseCategories,
-  );
-  const { options: statuses, add: addStatus } = useCustomOptions(
-    "custody-extra-statuses",
-    baseStatuses,
-  );
+  const { options: categories, add: addCategory } = useCategories();
+  const { options: statuses, add: addStatus } = useStatuses();
+
   const hasFilters = !!catFilter || !!statusFilter;
 
   return (
