@@ -661,8 +661,16 @@ export function GlobalSearch() {
                         <FileSearch className="size-4" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-card-foreground">{result.title}</span>
-                        <span className="block truncate text-xs text-muted-foreground">{result.detail}</span>
+                        <Highlight
+                          text={result.title}
+                          query={query}
+                          className="block truncate text-sm font-medium text-card-foreground"
+                        />
+                        <Highlight
+                          text={result.detail}
+                          query={query}
+                          className="block truncate text-xs text-muted-foreground"
+                        />
                       </span>
                       <ArrowUpLeft className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                     </button>
