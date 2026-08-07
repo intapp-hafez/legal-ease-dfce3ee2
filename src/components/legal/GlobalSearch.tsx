@@ -134,6 +134,42 @@ function describeSaved(item: SavedSearch) {
   return bits.join(" • ");
 }
 
+function Highlight({ text, query, className }: { text: string; query: string; className?: string }) {
+  const q = normalize(query).trim();
+  if (!q || !text) return <span className={className}>{text}</span>;
+
+  const chars = Array.from(text);
+  const map: number[] = [];
+  const norm: string[] = [];
+  for (let i = 0; i < chars.length; i++) {
+    const c = chars[i];
+    if (c === undefined) continue;
+    if (/[ًٌٍَُِّْـ]/.test(c)) continue;
+    const nc = normalize(c);
+    map.push(i);
+    norm.push(nc);
+  }
+  const normalizedString = norm.join("");
+  const start = normalizedString.indexOf(q);
+  if (start === -1) return <span className={className}>{text}</span>;
+
+  const end = start + q.length;
+  const startOriginal = map[start];
+  const endOriginal = end < map.length ? map[end] : text.length;
+  const before = text.slice(0, startOriginal);
+  const match = text.slice(startOriginal, endOriginal);
+  const after = text.slice(endOriginal);
+
+  return (
+    <span className={className}>
+      {before}
+      <mark className="rounded-sm bg-primary/20 px-0.5 text-[var(--primary-ink)]">{match}</mark>
+      {after}
+    </span>
+  );
+}
+
+
 export function GlobalSearch() {
   const { can } = useAuth();
   const navigate = useNavigate();
@@ -587,7 +623,11 @@ export function GlobalSearch() {
                       className={`${rowBase} py-2 ${isActive ? activeCls : "hover:bg-secondary"}`}
                     >
                       <Sparkles className="size-4 shrink-0 text-[var(--primary-ink)]" />
-                      <span className="min-w-0 flex-1 truncate text-sm text-card-foreground">{text}</span>
+                      <Highlight
+                        text={text}
+                        query={query}
+                        className="min-w-0 flex-1 truncate text-sm text-card-foreground"
+                      />
                       <span className="shrink-0 text-[10px] text-muted-foreground">تعبئة</span>
                     </button>
                   );
@@ -621,8 +661,16 @@ export function GlobalSearch() {
                         <FileSearch className="size-4" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-card-foreground">{result.title}</span>
-                        <span className="block truncate text-xs text-muted-foreground">{result.detail}</span>
+                        <Highlight
+                          text={result.title}
+                          query={query}
+                          className="block truncate text-sm font-medium text-card-foreground"
+                        />
+                        <Highlight
+                          text={result.detail}
+                          query={query}
+                          className="block truncate text-xs text-muted-foreground"
+                        />
                       </span>
                       <ArrowUpLeft className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                     </button>
