@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
+import { PageShell, Panel } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { assets } from "@/lib/legal-data";
 
