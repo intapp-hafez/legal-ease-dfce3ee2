@@ -639,7 +639,7 @@ export function GlobalSearch() {
           </div>
 
           <div className="flex items-center gap-3 border-t border-border px-3 py-1.5 text-[10px] text-muted-foreground">
-            <span>↑ ↓ للتنقل</span>
+            <span>↑ ↓ Tab للتنقل</span>
             <span>Enter للفتح</span>
             <span>Esc للإغلاق</span>
           </div>
