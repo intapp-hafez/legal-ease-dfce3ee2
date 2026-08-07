@@ -435,7 +435,7 @@ export function GlobalSearch() {
   const activeCls = "bg-secondary ring-1 ring-ring/40";
 
   return (
-    <div ref={rootRef} className="relative min-w-0 flex-1 max-w-xl">
+    <div ref={rootRef} className="relative min-w-0 flex-1 max-w-full">
       <Search className="pointer-events-none absolute right-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
       <input
         ref={inputRef}
