@@ -623,7 +623,11 @@ export function GlobalSearch() {
                       className={`${rowBase} py-2 ${isActive ? activeCls : "hover:bg-secondary"}`}
                     >
                       <Sparkles className="size-4 shrink-0 text-[var(--primary-ink)]" />
-                      <span className="min-w-0 flex-1 truncate text-sm text-card-foreground">{text}</span>
+                      <Highlight
+                        text={text}
+                        query={query}
+                        className="min-w-0 flex-1 truncate text-sm text-card-foreground"
+                      />
                       <span className="shrink-0 text-[10px] text-muted-foreground">تعبئة</span>
                     </button>
                   );
