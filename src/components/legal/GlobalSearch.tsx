@@ -134,6 +134,41 @@ function describeSaved(item: SavedSearch) {
   return bits.join(" • ");
 }
 
+function Highlight({ text, query, className }: { text: string; query: string; className?: string }) {
+  const q = normalize(query).trim();
+  if (!q || !text) return <span className={className}>{text}</span>;
+
+  const chars = Array.from(text);
+  const map: number[] = [];
+  const norm: string[] = [];
+  for (let i = 0; i < chars.length; i++) {
+    const c = chars[i];
+    if (/[ًٌٍَُِّْـ]/.test(c)) continue;
+    const nc = normalize(c);
+    map.push(i);
+    norm.push(nc);
+  }
+  const normalizedString = norm.join("");
+  const start = normalizedString.indexOf(q);
+  if (start === -1) return <span className={className}>{text}</span>;
+
+  const end = start + q.length;
+  const startOriginal = map[start];
+  const endOriginal = end < map.length ? map[end] : text.length;
+  const before = text.slice(0, startOriginal);
+  const match = text.slice(startOriginal, endOriginal);
+  const after = text.slice(endOriginal);
+
+  return (
+    <span className={className}>
+      {before}
+      <mark className="rounded-sm bg-primary/20 px-0.5 text-[var(--primary-ink)]">{match}</mark>
+      {after}
+    </span>
+  );
+}
+
+
 export function GlobalSearch() {
   const { can } = useAuth();
   const navigate = useNavigate();
