@@ -27,7 +27,7 @@ const baseCategories = [
   "معدات أخرى",
 ];
 
-const statuses = [
+const baseStatuses = [
   "متاحة",
   "مُسندة",
   "مُرجعة",
@@ -37,6 +37,32 @@ const statuses = [
   "صيانة",
   "مستبعدة",
 ];
+
+function useCustomOptions(key: string, base: string[]) {
+  const [extra, setExtra] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) setExtra(JSON.parse(raw));
+    } catch {
+      /* ignore */
+    }
+  }, [key]);
+  const add = (v: string) => {
+    setExtra((prev) => {
+      if (base.includes(v) || prev.includes(v)) return prev;
+      const next = [...prev, v];
+      try {
+        localStorage.setItem(key, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
+  return { options: [...base, ...extra], add };
+}
+
 
 export const Route = createFileRoute("/custody")({
   head: () => ({
