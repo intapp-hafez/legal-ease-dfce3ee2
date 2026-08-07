@@ -59,19 +59,48 @@ function CustodyPage() {
       title="عهد الموظفين"
       description="إدارة أصول الشركة المسندة للموظفين — إسناد، تعديل، وحذف العهد."
     >
-      <div className="grid gap-5 lg:grid-cols-4">
-        <div className="space-y-5 lg:col-span-1">
-          <Panel title="فئات الأصول">
-            <TagList items={categories} selected={catFilter} onSelect={setCatFilter} />
-          </Panel>
-          <Panel title="حالات العهدة">
-            <TagList items={statuses} selected={statusFilter} onSelect={setStatusFilter} />
-          </Panel>
-        </div>
+      <div className="space-y-5">
+        <Panel title="تصفية العهد">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm">
+              <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                فئة الأصل
+              </span>
+              <select
+                value={catFilter}
+                onChange={(e) => setCatFilter(e.target.value)}
+                className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+              >
+                <option value="">كل الفئات</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                حالة العهدة
+              </span>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+              >
+                <option value="">كل الحالات</option>
+                {statuses.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </Panel>
 
         <CrudTable
           filters={{ category: catFilter, status: statusFilter }}
-          className="lg:col-span-3"
           title="سجل العهد"
           addLabel="إسناد عهدة"
           storageKey="assets"
@@ -97,6 +126,7 @@ function CustodyPage() {
           ]}
         />
       </div>
+
     </PageShell>
   );
 }
