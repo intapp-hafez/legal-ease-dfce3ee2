@@ -143,6 +143,7 @@ function Highlight({ text, query, className }: { text: string; query: string; cl
   const norm: string[] = [];
   for (let i = 0; i < chars.length; i++) {
     const c = chars[i];
+    if (c === undefined) continue;
     if (/[ًٌٍَُِّْـ]/.test(c)) continue;
     const nc = normalize(c);
     map.push(i);
