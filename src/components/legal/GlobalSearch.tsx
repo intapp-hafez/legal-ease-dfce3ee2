@@ -342,12 +342,13 @@ export function GlobalSearch() {
   }, []);
 
   function onInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Tab") {
       if (!items.length) return;
       event.preventDefault();
       setOpen(true);
       setActiveIndex((i) => {
-        const next = event.key === "ArrowDown" ? i + 1 : i - 1;
+        const isDown = event.key === "ArrowDown" || (!event.shiftKey && event.key === "Tab");
+        const next = isDown ? i + 1 : i - 1;
         return (next + items.length) % items.length;
       });
       return;
@@ -376,6 +377,7 @@ export function GlobalSearch() {
       } else openResult(item.result);
     }
   }
+
 
   function clear() {
     setQuery("");
