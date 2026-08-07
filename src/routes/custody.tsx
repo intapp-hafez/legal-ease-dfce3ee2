@@ -7,7 +7,7 @@ import { SearchSelect } from "@/components/legal/SearchSelect";
 import { assets } from "@/lib/legal-data";
 
 
-const categories = [
+const baseCategories = [
   "لابتوب",
   "جهاز مكتبي",
   "شاشة",
