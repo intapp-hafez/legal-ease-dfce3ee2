@@ -17,7 +17,7 @@ type Props = {
   onChange: (v: string) => void;
   options: string[];
   allLabel: string;
-  onAddOption?: (v: string) => void;
+  onAddOption?: (v: string) => string | null | void;
   addLabel?: string;
 };
 
@@ -33,6 +33,7 @@ export function SearchSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  const [addError, setAddError] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -64,6 +65,7 @@ export function SearchSelect({
     if (open) {
       setQuery("");
       setActive(0);
+      setAddError(null);
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);
@@ -77,7 +79,12 @@ export function SearchSelect({
   const commit = (idx: number) => {
     if (canCreate && idx === items.length) {
       const v = query.trim();
-      onAddOption?.(v);
+      const err = onAddOption?.(v);
+      if (err) {
+        setAddError(err);
+        return;
+      }
+      setAddError(null);
       onChange(v);
     } else {
       const v = items[idx];
@@ -158,6 +165,7 @@ export function SearchSelect({
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setActive(0);
+                  setAddError(null);
                 }}
                 onKeyDown={onKeyDown}
                 placeholder="ابحث أو اكتب اسمًا جديدًا…"
@@ -208,7 +216,12 @@ export function SearchSelect({
                   </span>
                 </button>
               )}
-              {items.length === 0 && !canCreate && (
+              {addError && (
+                <p role="alert" className="px-3 py-2 text-xs font-medium text-destructive">
+                  {addError}
+                </p>
+              )}
+              {items.length === 0 && !canCreate && !addError && (
                 <p className="px-3 py-3 text-sm text-muted-foreground">لا توجد نتائج</p>
               )}
             </div>
