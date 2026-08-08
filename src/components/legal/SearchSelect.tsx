@@ -77,13 +77,25 @@ export function SearchSelect({
   const total = items.length + (canCreate ? 1 : 0);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open && !creating) return;
     const onDoc = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+        setCreating(false);
+      }
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
+  }, [open, creating]);
+
+  useEffect(() => {
+    if (creating) {
+      setDraft("");
+      setAdded([]);
+      setCreateError(null);
+    }
+  }, [creating]);
+
 
   useEffect(() => {
     if (open) {
