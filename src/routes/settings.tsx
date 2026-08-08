@@ -4,6 +4,7 @@ import { CrudTable } from "@/components/legal/CrudTable";
 import { BrandingSettings } from "@/components/legal/BrandingSettings";
 import { AccessControl } from "@/components/legal/AccessControl";
 import { CustodyOptionsSettings } from "@/components/legal/CustodyOptionsSettings";
+import { DocumentCategoriesSettings } from "@/components/legal/DocumentCategoriesSettings";
 
 import { roles, reminderSchedule } from "@/lib/legal-data";
 import { useAuditLog } from "@/lib/audit";
