@@ -60,7 +60,14 @@ function TasksPage() {
           fields={[
             { key: "no", label: "رقم المهمة", type: "mono", required: true },
             { key: "title", label: "العنوان", required: true },
-            { key: "category", label: "التصنيف", type: "select", options: categories },
+            {
+              key: "category",
+              label: "التصنيف",
+              type: "select",
+              options: categories,
+              onAddOption: addCategory,
+              addLabel: "إضافة تصنيف جديد",
+            },
             {
               key: "priority",
               label: "الأولوية",
