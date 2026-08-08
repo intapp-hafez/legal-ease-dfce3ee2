@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Download, Pencil, Plus, RotateCcw, Search, Trash2, Upload, X } from "lucide-react";
 import { Panel, StatusPill } from "@/components/legal/PageShell";
 import { ImportWizard, type ImportResult } from "@/components/legal/ImportWizard";
+import { SearchSelect } from "@/components/legal/SearchSelect";
 import { useCollection, nextId, type Row } from "@/lib/crud";
 import { downloadTemplate } from "@/lib/excel";
 import { logAudit, CURRENT_USER } from "@/lib/audit";
@@ -14,6 +15,9 @@ export type Field = {
   options?: string[];
   required?: boolean;
   hideInForm?: boolean;
+  /** If provided, renders a searchable select with a + button to add new options. */
+  onAddOption?: (value: string) => string | null | void;
+  addLabel?: string;
 };
 
 type Props<T extends Row> = {
