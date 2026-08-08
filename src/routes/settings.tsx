@@ -58,7 +58,9 @@ function SettingsPage() {
         <CustodyOptionsSettings />
       </div>
 
-
+      <div className="mb-5">
+        <DocumentCategoriesSettings />
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
         <CrudTable
