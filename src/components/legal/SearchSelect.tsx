@@ -34,6 +34,30 @@ export function SearchSelect({
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [addError, setAddError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [added, setAdded] = useState<string[]>([]);
+  const createRef = useRef<HTMLInputElement>(null);
+
+  const quickCreate = () => {
+    const v = draft.trim();
+    if (!v) {
+      setCreateError("الرجاء إدخال اسم صالح.");
+      return;
+    }
+    const err = onAddOption?.(v);
+    if (err) {
+      setCreateError(err);
+      return;
+    }
+    setCreateError(null);
+    setAdded((a) => [...a, v]);
+    onChange(v);
+    setDraft("");
+    requestAnimationFrame(() => createRef.current?.focus());
+  };
+
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
