@@ -320,18 +320,30 @@ export function CrudTable<T extends Row>({
                       {f.required ? " *" : ""}
                     </span>
                     {f.type === "select" || f.type === "status" ? (
-                      <select
-                        value={String(draft[f.key] ?? "")}
-                        onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
-                        className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-                      >
-                        <option value="">—</option>
-                        {(f.options ?? []).map((o) => (
-                          <option key={o} value={o}>
-                            {o}
-                          </option>
-                        ))}
-                      </select>
+                      f.onAddOption ? (
+                        <SearchSelect
+                          label={""}
+                          value={String(draft[f.key] ?? "")}
+                          onChange={(v) => setDraft({ ...draft, [f.key]: v })}
+                          options={f.options ?? []}
+                          allLabel="—"
+                          onAddOption={f.onAddOption}
+                          addLabel={f.addLabel ?? "إضافة خيار جديد"}
+                        />
+                      ) : (
+                        <select
+                          value={String(draft[f.key] ?? "")}
+                          onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
+                          className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                        >
+                          <option value="">—</option>
+                          {(f.options ?? []).map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </select>
+                      )
                     ) : (
                       <input
                         type={
