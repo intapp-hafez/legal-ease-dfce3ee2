@@ -34,6 +34,30 @@ export function SearchSelect({
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [addError, setAddError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [added, setAdded] = useState<string[]>([]);
+  const createRef = useRef<HTMLInputElement>(null);
+
+  const quickCreate = () => {
+    const v = draft.trim();
+    if (!v) {
+      setCreateError("الرجاء إدخال اسم صالح.");
+      return;
+    }
+    const err = onAddOption?.(v);
+    if (err) {
+      setCreateError(err);
+      return;
+    }
+    setCreateError(null);
+    setAdded((a) => [...a, v]);
+    onChange(v);
+    setDraft("");
+    requestAnimationFrame(() => createRef.current?.focus());
+  };
+
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -53,13 +77,25 @@ export function SearchSelect({
   const total = items.length + (canCreate ? 1 : 0);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open && !creating) return;
     const onDoc = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+        setCreating(false);
+      }
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
+  }, [open, creating]);
+
+  useEffect(() => {
+    if (creating) {
+      setDraft("");
+      setAdded([]);
+      setCreateError(null);
+    }
+  }, [creating]);
+
 
   useEffect(() => {
     if (open) {
@@ -145,8 +181,10 @@ export function SearchSelect({
               title={addLabel}
               aria-label={addLabel}
               onClick={() => {
-                setOpen(true);
-                requestAnimationFrame(() => inputRef.current?.focus());
+                setOpen(false);
+                setCreating((c) => !c);
+                setCreateError(null);
+                requestAnimationFrame(() => createRef.current?.focus());
               }}
               className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background text-foreground outline-none hover:bg-muted focus:ring-2 focus:ring-ring/40"
             >
@@ -154,6 +192,61 @@ export function SearchSelect({
             </button>
           )}
         </div>
+
+        {creating && onAddOption && (
+          <div className="absolute z-40 mt-1 w-full rounded-lg border border-border bg-popover p-3 shadow-lg">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-semibold text-foreground">{addLabel}</span>
+              <button
+                type="button"
+                aria-label="إغلاق"
+                onClick={() => setCreating(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <input
+                ref={createRef}
+                value={draft}
+                onChange={(e) => {
+                  setDraft(e.target.value);
+                  setCreateError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    quickCreate();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setCreating(false);
+                  }
+                }}
+                placeholder="اكتب الاسم الجديد…"
+                className="h-9 flex-1 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+              />
+              <button
+                type="button"
+                onClick={quickCreate}
+                className="h-9 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground hover:opacity-90"
+              >
+                حفظ
+              </button>
+            </div>
+            {createError && (
+              <p role="alert" className="mt-2 text-xs font-medium text-destructive">
+                {createError}
+              </p>
+            )}
+            {added.length > 0 && !createError && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                تمت الإضافة والحفظ تلقائيًا: {added.join(" • ")}
+              </p>
+            )}
+          </div>
+        )}
+
 
         {open && (
           <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-lg">

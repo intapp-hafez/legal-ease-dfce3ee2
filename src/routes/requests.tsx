@@ -3,8 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { requests } from "@/lib/legal-data";
+import { useOptionList } from "@/lib/option-lists";
 
-const types = [
+const baseTypes = [
   "نسخة من العقد",
   "خطاب تعريف بالعمل",
   "خطاب تعريف بالراتب",
@@ -34,6 +35,7 @@ export const Route = createFileRoute("/requests")({
 
 function RequestsPage() {
   const [filter, setFilter] = useState("");
+  const { options: types, add: addType } = useOptionList("request-types", baseTypes);
 
   return (
     <PageShell
@@ -70,7 +72,14 @@ function RequestsPage() {
           fields={[
             { key: "no", label: "رقم الطلب", type: "mono", required: true },
             { key: "employee", label: "الموظف", required: true },
-            { key: "type", label: "نوع الطلب", type: "select", options: types },
+            {
+              key: "type",
+              label: "نوع الطلب",
+              type: "select",
+              options: types,
+              onAddOption: addType,
+              addLabel: "إضافة نوع جديد",
+            },
             { key: "date", label: "التاريخ", type: "date" },
             { key: "stage", label: "المرحلة الحالية", type: "select", options: workflow },
             {

@@ -3,8 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { contracts, contractWorkflow } from "@/lib/legal-data";
+import { useOptionList } from "@/lib/option-lists";
 
-const types = [
+const baseTypes = [
   "عقد عمل",
   "تجديد عقد",
   "عقد مؤقت",
@@ -33,6 +34,7 @@ export const Route = createFileRoute("/contracts")({
 
 function ContractsPage() {
   const [filter, setFilter] = useState("");
+  const { options: types, add: addType } = useOptionList("contract-types", baseTypes);
 
   return (
     <PageShell
@@ -74,7 +76,14 @@ function ContractsPage() {
             { key: "code", label: "الكود" },
             { key: "dept", label: "القسم" },
             { key: "position", label: "المسمى" },
-            { key: "type", label: "النوع", type: "select", options: types },
+            {
+              key: "type",
+              label: "النوع",
+              type: "select",
+              options: types,
+              onAddOption: addType,
+              addLabel: "إضافة نوع جديد",
+            },
             { key: "start", label: "البداية", type: "date" },
             { key: "end", label: "النهاية", type: "date" },
             { key: "salary", label: "الراتب" },
