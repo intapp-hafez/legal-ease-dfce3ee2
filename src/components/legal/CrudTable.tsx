@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Download, Pencil, Plus, RotateCcw, Search, Trash2, Upload, X } from "lucide-react";
 import { Panel, StatusPill } from "@/components/legal/PageShell";
 import { ImportWizard, type ImportResult } from "@/components/legal/ImportWizard";
+import { SearchSelect } from "@/components/legal/SearchSelect";
 import { useCollection, nextId, type Row } from "@/lib/crud";
 import { downloadTemplate } from "@/lib/excel";
 import { logAudit, CURRENT_USER } from "@/lib/audit";
@@ -14,6 +15,9 @@ export type Field = {
   options?: string[];
   required?: boolean;
   hideInForm?: boolean;
+  /** If provided, renders a searchable select with a + button to add new options. */
+  onAddOption?: (value: string) => string | null | void;
+  addLabel?: string;
 };
 
 type Props<T extends Row> = {
@@ -316,18 +320,30 @@ export function CrudTable<T extends Row>({
                       {f.required ? " *" : ""}
                     </span>
                     {f.type === "select" || f.type === "status" ? (
-                      <select
-                        value={String(draft[f.key] ?? "")}
-                        onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
-                        className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-                      >
-                        <option value="">—</option>
-                        {(f.options ?? []).map((o) => (
-                          <option key={o} value={o}>
-                            {o}
-                          </option>
-                        ))}
-                      </select>
+                      f.onAddOption ? (
+                        <SearchSelect
+                          label={""}
+                          value={String(draft[f.key] ?? "")}
+                          onChange={(v) => setDraft({ ...draft, [f.key]: v })}
+                          options={f.options ?? []}
+                          allLabel="—"
+                          onAddOption={f.onAddOption}
+                          addLabel={f.addLabel ?? "إضافة خيار جديد"}
+                        />
+                      ) : (
+                        <select
+                          value={String(draft[f.key] ?? "")}
+                          onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
+                          className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                        >
+                          <option value="">—</option>
+                          {(f.options ?? []).map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </select>
+                      )
                     ) : (
                       <input
                         type={

@@ -4,6 +4,7 @@ import { CrudTable } from "@/components/legal/CrudTable";
 import { BrandingSettings } from "@/components/legal/BrandingSettings";
 import { AccessControl } from "@/components/legal/AccessControl";
 import { CustodyOptionsSettings } from "@/components/legal/CustodyOptionsSettings";
+import { DocumentCategoriesSettings } from "@/components/legal/DocumentCategoriesSettings";
 
 import { roles, reminderSchedule } from "@/lib/legal-data";
 import { useAuditLog } from "@/lib/audit";
@@ -57,7 +58,9 @@ function SettingsPage() {
         <CustodyOptionsSettings />
       </div>
 
-
+      <div className="mb-5">
+        <DocumentCategoriesSettings />
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
         <CrudTable

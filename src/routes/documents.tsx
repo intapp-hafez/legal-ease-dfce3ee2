@@ -1,27 +1,11 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
+import { RotateCcw } from "lucide-react";
+import { PageShell, Panel } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
+import { SearchSelect } from "@/components/legal/SearchSelect";
 import { companyDocuments } from "@/lib/legal-data";
-
-const categories = [
-  "السجل التجاري",
-  "البطاقة الضريبية",
-  "شهادة ضريبة القيمة المضافة",
-  "الغرفة التجارية",
-  "رخصة استيراد",
-  "رخصة تصدير",
-  "بوالص التأمين",
-  "شهادات العلامات التجارية",
-  "سياسات الشركة",
-  "عقود الإيجار",
-  "التراخيص الحكومية",
-  "نماذج عدم الإفصاح",
-  "اتفاقيات الشراكة",
-  "عقود الموردين",
-  "عقود العملاء",
-  "مستندات قانونية داخلية",
-];
+import { useDocumentCategories } from "@/lib/document-categories";
 
 export const Route = createFileRoute("/documents")({
   head: () => ({
@@ -43,20 +27,41 @@ export const Route = createFileRoute("/documents")({
 
 function DocumentsPage() {
   const [filter, setFilter] = useState("");
+  const { options: categories, add: addCategory } = useDocumentCategories();
 
   return (
     <PageShell
       title="مستندات الشركة القانونية"
       description="حفظ وتتبع جميع المستندات الرسمية والتراخيص مع إضافة وتعديل وحذف السجلات."
     >
-      <div className="grid gap-5 lg:grid-cols-4">
-        <Panel title="التصنيفات" className="lg:col-span-1">
-          <TagList items={categories} selected={filter} onSelect={setFilter} />
+      <div className="space-y-5">
+        <Panel title="تصفية المستندات">
+          <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+            <SearchSelect
+              label="التصنيف"
+              allLabel="كل التصنيفات"
+              value={filter}
+              onChange={setFilter}
+              options={categories}
+              onAddOption={addCategory}
+              addLabel="إضافة تصنيف جديد"
+            />
+            <div className="flex items-end">
+              <button
+                type="button"
+                disabled={!filter}
+                onClick={() => setFilter("")}
+                className="flex h-10 items-center gap-2 rounded-lg border border-border bg-background px-3 text-sm outline-none hover:bg-muted focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
+              >
+                <RotateCcw className="h-4 w-4" />
+                تصفير التصفية
+              </button>
+            </div>
+          </div>
         </Panel>
 
         <CrudTable
           filters={{ category: filter }}
-          className="lg:col-span-3"
           title="سجل المستندات"
           subtitle="رقم المستند، الجهة المُصدِرة، تواريخ الإصدار والانتهاء"
           addLabel="مستند جديد"
@@ -67,7 +72,15 @@ function DocumentsPage() {
           fields={[
             { key: "no", label: "رقم المستند", type: "mono", required: true },
             { key: "name", label: "الاسم", required: true },
-            { key: "category", label: "التصنيف", type: "select", options: categories },
+            {
+              key: "category",
+              label: "التصنيف",
+              type: "select",
+              options: categories,
+              onAddOption: addCategory,
+              addLabel: "إضافة تصنيف جديد",
+              required: true,
+            },
             { key: "authority", label: "الجهة المُصدِرة" },
             { key: "issue", label: "الإصدار", type: "date" },
             { key: "expiry", label: "الانتهاء", type: "date" },
