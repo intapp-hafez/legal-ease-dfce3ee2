@@ -89,8 +89,25 @@ const toneMap: Record<string, string> = {
   "مؤرشف": "bg-muted text-muted-foreground border-border",
 };
 
-export function StatusPill({ value }: { value: string }) {
+export function StatusPill({ value, onChange, options }: { value: string; onChange?: (val: string) => void; options?: string[] }) {
   const cls = toneMap[value] ?? "bg-secondary text-secondary-foreground border-border";
+  
+  if (onChange && options) {
+    return (
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 pl-6 text-xs font-medium outline-none cursor-pointer ${cls}`}
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt} className="bg-background text-foreground">
+            {opt}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
   return (
     <span
       className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${cls}`}
@@ -103,9 +120,11 @@ export function StatusPill({ value }: { value: string }) {
 export function DataTable({
   columns,
   rows,
+  onRowClick,
 }: {
   columns: string[];
   rows: ReactNode[][];
+  onRowClick?: (rowIndex: number) => void;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -126,7 +145,10 @@ export function DataTable({
           {rows.map((row, i) => (
             <tr
               key={i}
-              className="border-b border-border/60 transition-colors last:border-0 hover:bg-secondary/60"
+              onClick={() => onRowClick?.(i)}
+              className={`border-b border-border/60 transition-colors last:border-0 hover:bg-secondary/60 ${
+                onRowClick ? "cursor-pointer" : ""
+              }`}
             >
               {row.map((cell, j) => (
                 <td key={j} className="whitespace-nowrap px-3 py-3 text-foreground">

@@ -20,6 +20,11 @@ import { Route as RequestsRouteImport } from './routes/requests'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as ViolationsRouteImport } from './routes/violations'
+import { Route as EmployeeCustodyRouteImport } from './routes/employee/custody'
+import { Route as TasksIndexRouteImport } from './routes/tasks/index'
+import { Route as TasksTaskIdRouteImport } from './routes/tasks/$taskId'
+import { Route as EmployeeTasksIndexRouteImport } from './routes/employee/tasks/index'
+import { Route as EmployeeTasksTaskIdRouteImport } from './routes/employee/tasks/$taskId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -76,6 +81,31 @@ const ViolationsRoute = ViolationsRouteImport.update({
   path: '/violations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EmployeeCustodyRoute = EmployeeCustodyRouteImport.update({
+  id: '/employee/custody',
+  path: '/employee/custody',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksIndexRoute = TasksIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => TasksRoute,
+} as any)
+const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
+  id: '/$taskId',
+  path: '/$taskId',
+  getParentRoute: () => TasksRoute,
+} as any)
+const EmployeeTasksIndexRoute = EmployeeTasksIndexRouteImport.update({
+  id: '/employee/tasks/',
+  path: '/employee/tasks/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmployeeTasksTaskIdRoute = EmployeeTasksTaskIdRouteImport.update({
+  id: '/employee/tasks/$taskId',
+  path: '/employee/tasks/$taskId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -87,8 +117,13 @@ export interface FileRoutesByFullPath {
   '/repository': typeof RepositoryRoute
   '/requests': typeof RequestsRoute
   '/settings': typeof SettingsRoute
-  '/tasks': typeof TasksRoute
+  '/tasks': typeof TasksRouteWithChildren
   '/violations': typeof ViolationsRoute
+  '/employee/custody': typeof EmployeeCustodyRoute
+  '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/tasks/': typeof TasksIndexRoute
+  '/employee/tasks/$taskId': typeof EmployeeTasksTaskIdRoute
+  '/employee/tasks/': typeof EmployeeTasksIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -100,8 +135,12 @@ export interface FileRoutesByTo {
   '/repository': typeof RepositoryRoute
   '/requests': typeof RequestsRoute
   '/settings': typeof SettingsRoute
-  '/tasks': typeof TasksRoute
   '/violations': typeof ViolationsRoute
+  '/employee/custody': typeof EmployeeCustodyRoute
+  '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/tasks': typeof TasksIndexRoute
+  '/employee/tasks/$taskId': typeof EmployeeTasksTaskIdRoute
+  '/employee/tasks': typeof EmployeeTasksIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -114,8 +153,13 @@ export interface FileRoutesById {
   '/repository': typeof RepositoryRoute
   '/requests': typeof RequestsRoute
   '/settings': typeof SettingsRoute
-  '/tasks': typeof TasksRoute
+  '/tasks': typeof TasksRouteWithChildren
   '/violations': typeof ViolationsRoute
+  '/employee/custody': typeof EmployeeCustodyRoute
+  '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/tasks/': typeof TasksIndexRoute
+  '/employee/tasks/$taskId': typeof EmployeeTasksTaskIdRoute
+  '/employee/tasks/': typeof EmployeeTasksIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +175,11 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/violations'
+    | '/employee/custody'
+    | '/tasks/$taskId'
+    | '/tasks/'
+    | '/employee/tasks/$taskId'
+    | '/employee/tasks/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -142,8 +191,12 @@ export interface FileRouteTypes {
     | '/repository'
     | '/requests'
     | '/settings'
-    | '/tasks'
     | '/violations'
+    | '/employee/custody'
+    | '/tasks/$taskId'
+    | '/tasks'
+    | '/employee/tasks/$taskId'
+    | '/employee/tasks'
   id:
     | '__root__'
     | '/'
@@ -157,6 +210,11 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/violations'
+    | '/employee/custody'
+    | '/tasks/$taskId'
+    | '/tasks/'
+    | '/employee/tasks/$taskId'
+    | '/employee/tasks/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -169,8 +227,11 @@ export interface RootRouteChildren {
   RepositoryRoute: typeof RepositoryRoute
   RequestsRoute: typeof RequestsRoute
   SettingsRoute: typeof SettingsRoute
-  TasksRoute: typeof TasksRoute
+  TasksRoute: typeof TasksRouteWithChildren
   ViolationsRoute: typeof ViolationsRoute
+  EmployeeCustodyRoute: typeof EmployeeCustodyRoute
+  EmployeeTasksTaskIdRoute: typeof EmployeeTasksTaskIdRoute
+  EmployeeTasksIndexRoute: typeof EmployeeTasksIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -252,8 +313,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ViolationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/employee/custody': {
+      id: '/employee/custody'
+      path: '/employee/custody'
+      fullPath: '/employee/custody'
+      preLoaderRoute: typeof EmployeeCustodyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks/': {
+      id: '/tasks/'
+      path: '/'
+      fullPath: '/tasks/'
+      preLoaderRoute: typeof TasksIndexRouteImport
+      parentRoute: typeof TasksRoute
+    }
+    '/tasks/$taskId': {
+      id: '/tasks/$taskId'
+      path: '/$taskId'
+      fullPath: '/tasks/$taskId'
+      preLoaderRoute: typeof TasksTaskIdRouteImport
+      parentRoute: typeof TasksRoute
+    }
+    '/employee/tasks/': {
+      id: '/employee/tasks/'
+      path: '/employee/tasks'
+      fullPath: '/employee/tasks/'
+      preLoaderRoute: typeof EmployeeTasksIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/employee/tasks/$taskId': {
+      id: '/employee/tasks/$taskId'
+      path: '/employee/tasks/$taskId'
+      fullPath: '/employee/tasks/$taskId'
+      preLoaderRoute: typeof EmployeeTasksTaskIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
+
+interface TasksRouteChildren {
+  TasksTaskIdRoute: typeof TasksTaskIdRoute
+  TasksIndexRoute: typeof TasksIndexRoute
+}
+
+const TasksRouteChildren: TasksRouteChildren = {
+  TasksTaskIdRoute: TasksTaskIdRoute,
+  TasksIndexRoute: TasksIndexRoute,
+}
+
+const TasksRouteWithChildren = TasksRoute._addFileChildren(TasksRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -265,8 +373,11 @@ const rootRouteChildren: RootRouteChildren = {
   RepositoryRoute: RepositoryRoute,
   RequestsRoute: RequestsRoute,
   SettingsRoute: SettingsRoute,
-  TasksRoute: TasksRoute,
+  TasksRoute: TasksRouteWithChildren,
   ViolationsRoute: ViolationsRoute,
+  EmployeeCustodyRoute: EmployeeCustodyRoute,
+  EmployeeTasksTaskIdRoute: EmployeeTasksTaskIdRoute,
+  EmployeeTasksIndexRoute: EmployeeTasksIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

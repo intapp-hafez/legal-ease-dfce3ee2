@@ -156,7 +156,7 @@ export function SearchSelect({
 
   return (
     <div className="block text-sm" ref={rootRef}>
-      <span className="mb-1 block text-xs font-medium text-muted-foreground">{label}</span>
+      {label && <span className="mb-1 block text-xs font-medium text-muted-foreground">{label}</span>}
       <div className="relative">
         <div className="flex gap-2">
           <button

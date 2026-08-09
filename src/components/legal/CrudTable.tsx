@@ -11,13 +11,14 @@ import { logAudit, CURRENT_USER } from "@/lib/audit";
 export type Field = {
   key: string;
   label: string;
-  type?: "text" | "number" | "date" | "select" | "status" | "progress" | "mono";
+  type?: "text" | "number" | "date" | "select" | "status" | "progress" | "mono" | "textarea" | "file";
   options?: string[];
   required?: boolean;
   hideInForm?: boolean;
   /** If provided, renders a searchable select with a + button to add new options. */
   onAddOption?: (value: string) => string | null | void;
   addLabel?: string;
+  accept?: string;
 };
 
 type Props<T extends Row> = {
@@ -33,6 +34,7 @@ type Props<T extends Row> = {
   extraActions?: ReactNode;
   /** Optional external filters, e.g. { category: "رخصة استيراد" }. Empty values are ignored. */
   filters?: Record<string, string>;
+  onRowClick?: (row: T) => void;
 };
 
 function emptyRow(fields: Field[]): Row {
@@ -52,6 +54,8 @@ export function CrudTable<T extends Row>({
   addLabel = "إضافة",
   subtitle,
   filters,
+  extraActions,
+  onRowClick,
 }: Props<T>) {
 
   const { items, create, update, remove, reset, replaceAll } = useCollection<T>(
@@ -156,6 +160,7 @@ export function CrudTable<T extends Row>({
       className={className}
       action={
         <div className="flex flex-wrap items-center gap-2">
+          {extraActions}
           <button
             onClick={() => downloadTemplate(`قالب-${title}`, fields, items[0])}
             title="تحميل قالب Excel جاهز"
@@ -244,7 +249,12 @@ export function CrudTable<T extends Row>({
             {filtered.map((row) => (
               <tr
                 key={String(row[idKey])}
-                className="border-b border-border/60 transition-colors last:border-0 hover:bg-secondary/60"
+                className={`border-b border-border/60 transition-colors last:border-0 hover:bg-secondary/60 ${onRowClick ? "cursor-pointer" : ""}`}
+                onClick={(e) => {
+                  if (onRowClick && !(e.target as HTMLElement).closest("button")) {
+                    onRowClick(row);
+                  }
+                }}
               >
                 {fields.map((f) => (
                   <td key={f.key} className="whitespace-nowrap px-3 py-3 text-foreground">
@@ -314,7 +324,7 @@ export function CrudTable<T extends Row>({
               {fields
                 .filter((f) => !f.hideInForm)
                 .map((f) => (
-                  <label key={f.key} className="block text-sm">
+                  <label key={f.key} className={`block text-sm ${f.type === "textarea" || f.type === "file" ? "sm:col-span-2" : ""}`}>
                     <span className="mb-1 block text-xs font-medium text-muted-foreground">
                       {f.label}
                       {f.required ? " *" : ""}
@@ -344,6 +354,33 @@ export function CrudTable<T extends Row>({
                           ))}
                         </select>
                       )
+                    ) : f.type === "textarea" ? (
+                      <textarea
+                        value={String(draft[f.key] ?? "")}
+                        onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
+                        className="min-h-[80px] w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                      />
+                    ) : f.type === "file" ? (
+                      <div>
+                        <input
+                          type="file"
+                          accept={f.accept}
+                          multiple
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []).map((file) => file.name).join("، ");
+                            setDraft({ ...draft, [f.key]: files });
+                          }}
+                          className="h-10 w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm outline-none file:ml-4 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-primary hover:file:bg-primary/20 focus:ring-2 focus:ring-ring/40"
+                        />
+                        {f.accept && (
+                          <p className="mt-1.5 text-[11px] text-muted-foreground">
+                            الملفات المسموحة:{" "}
+                            <span className="font-mono opacity-80" dir="ltr">
+                              {f.accept.replace(/\./g, "").replace(/,/g, ", ")}
+                            </span>
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <input
                         type={

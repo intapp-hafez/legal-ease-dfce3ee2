@@ -24,6 +24,9 @@ import {
   YAxis,
 } from "recharts";
 
+import { useAuth } from "@/lib/auth";
+import { EmployeeDashboard } from "@/components/legal/EmployeeDashboard";
+
 import { PageShell, Panel, StatusPill } from "@/components/legal/PageShell";
 import {
   kpis,
@@ -111,8 +114,7 @@ const donutGradient = (() => {
   return `conic-gradient(${stops.join(", ")})`;
 })();
 
-
-function Dashboard() {
+function AdminDashboard() {
   const today = new Date().toLocaleDateString("ar-EG", {
     weekday: "long",
     year: "numeric",
@@ -307,4 +309,14 @@ function Dashboard() {
       </div>
     </PageShell>
   );
+}
+
+function Dashboard() {
+  const { user } = useAuth();
+  
+  if (user?.role === "employee") {
+    return <EmployeeDashboard />;
+  }
+  
+  return <AdminDashboard />;
 }

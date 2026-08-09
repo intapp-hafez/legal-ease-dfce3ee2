@@ -166,3 +166,110 @@ export const auditLog = [
   { time: "2026-08-01 16:50", user: "أ. حافظ رحيم", action: "إرجاع عهدة", target: "AST-3303", ip: "10.0.4.18" },
   { time: "2026-08-01 14:11", user: "النظام", action: "نسخ احتياطي تلقائي", target: "—", ip: "—" },
 ];
+
+export type ArchiveNode = {
+  id: string;
+  name: string;
+  type: "folder" | "file";
+  size?: string;
+  updatedAt: string;
+  department?: string;
+  category?: string;
+  fileType?: string;
+  owner?: string;
+  version?: string;
+  status?: "Active" | "Expired" | "Archived";
+  confidentiality?: "Normal" | "Confidential" | "Highly Confidential";
+  children?: ArchiveNode[];
+};
+
+export const archiveData: ArchiveNode[] = [
+  {
+    id: "dept-hr",
+    name: "الموارد البشرية",
+    type: "folder",
+    updatedAt: "2026-08-01",
+    children: [
+      {
+        id: "hr-emp",
+        name: "الموظفون",
+        type: "folder",
+        updatedAt: "2026-08-02",
+        children: [
+          {
+            id: "hr-emp-001",
+            name: "موظف 001",
+            type: "folder",
+            updatedAt: "2026-08-02",
+            children: [
+              {
+                id: "file-contract-1",
+                name: "عقد العمل.pdf",
+                type: "file",
+                size: "2.4 م.ب",
+                updatedAt: "2026-08-02",
+                department: "الموارد البشرية",
+                category: "عقد",
+                fileType: "PDF",
+                owner: "أحمد",
+                version: "V1",
+                status: "Active",
+                confidentiality: "Confidential",
+              },
+              {
+                id: "file-id-1",
+                name: "الهوية الوطنية.jpg",
+                type: "file",
+                size: "1.1 م.ب",
+                updatedAt: "2026-08-01",
+                department: "الموارد البشرية",
+                category: "هوية",
+                fileType: "Image",
+                owner: "أحمد",
+                version: "V1",
+                status: "Active",
+                confidentiality: "Highly Confidential",
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "dept-finance",
+    name: "المالية",
+    type: "folder",
+    updatedAt: "2026-07-25",
+    children: []
+  },
+  {
+    id: "dept-legal",
+    name: "الشؤون القانونية",
+    type: "folder",
+    updatedAt: "2026-08-05",
+    children: []
+  }
+];
+
+export const employeeKPIs = [
+  { label: "مهام قيد التنفيذ", value: 3, icon: "listChecks", tone: "warning" },
+  { label: "مستنداتي النشطة", value: 4, icon: "fileCheck", tone: "success" },
+] as const;
+
+export const employeeTasks = [
+  { id: "TSK-201", title: "تحديث بيانات التأمين الطبي", priority: "عالية", status: "قيد التنفيذ", progress: 40, notes: [] as {id: string, text: string, date: string}[] },
+  { id: "TSK-202", title: "مراجعة سياسة الاستخدام العادل", priority: "متوسطة", status: "جديدة", progress: 0, notes: [] as {id: string, text: string, date: string}[] },
+  { id: "TSK-203", title: "التوقيع على الملحق رقم 3", priority: "عاجلة", status: "متأخرة", progress: 10, notes: [] as {id: string, text: string, date: string}[] },
+];
+
+export const employeeRequests = [
+  { no: "RQ-330", type: "طلب إجازة سنوية", date: "2026-08-05", stage: "المدير المباشر", status: "قيد المعالجة" },
+  { no: "RQ-321", type: "طلب سلفة طارئة", date: "2026-07-28", stage: "مكتمل", status: "مكتمل" },
+];
+
+export const employeeCustody = [
+  { id: "AST-442", name: "لابتوب Dell Latitude", date: "2025-01-15", status: "مسندة" },
+  { id: "AST-510", name: "بطاقة دخول للمبنى", date: "2025-01-15", status: "مسندة" },
+];
+

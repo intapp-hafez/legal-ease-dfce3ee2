@@ -51,24 +51,36 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
           الوحدات الرئيسية
         </p>
         <ul className="space-y-1">
-          {visible.map(({ to, label, icon: Icon }) => (
-            <li key={to}>
-              <Link
-                to={to}
-                onClick={onNavigate}
-                activeOptions={{ exact: to === "/" }}
-                activeProps={{
-                  className:
-                    "bg-sidebar-primary/15 text-sidebar-primary-foreground ring-1 ring-sidebar-primary/40",
-                }}
-                inactiveProps={{ className: "text-sidebar-foreground/90" }}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-sidebar-accent"
-              >
-                <Icon className="size-4 shrink-0" />
-                <span>{label}</span>
-              </Link>
-            </li>
-          ))}
+          {visible.map(({ to, label, icon: Icon, id }) => {
+            const isEmpCustody = user?.role === "employee" && id === "custody";
+            const isEmpTasks = user?.role === "employee" && id === "tasks";
+            
+            let displayLabel: string = label;
+            if (isEmpCustody) displayLabel = "عهدتي";
+            
+            let targetTo: any = to;
+            if (isEmpCustody) targetTo = "/employee/custody";
+            if (isEmpTasks) targetTo = "/employee/tasks";
+
+            return (
+              <li key={to}>
+                <Link
+                  to={targetTo}
+                  onClick={onNavigate}
+                  activeOptions={{ exact: to === "/" }}
+                  activeProps={{
+                    className:
+                      "bg-sidebar-primary/15 text-sidebar-primary font-medium ring-1 ring-sidebar-primary/40",
+                  }}
+                  inactiveProps={{ className: "text-sidebar-foreground/90" }}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-sidebar-accent"
+                >
+                  <Icon className="size-4 shrink-0" />
+                  <span>{displayLabel}</span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 

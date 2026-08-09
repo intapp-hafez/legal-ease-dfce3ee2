@@ -65,7 +65,6 @@ export const defaultMatrix: RoleMatrix = {
     ...fill(false, false),
     dashboard: { view: true, edit: false },
     tasks: { view: true, edit: true },
-    requests: { view: true, edit: true },
     custody: { view: true, edit: false },
     repository: { view: true, edit: false },
   },
@@ -87,7 +86,7 @@ export const seedUsers: User[] = [
 ];
 
 const USERS_KEY = "int-legal:users";
-const MATRIX_KEY = "int-legal:role-matrix";
+const MATRIX_KEY = "int-legal:role-matrix-v2";
 const SESSION_KEY = "int-legal:session";
 
 function readJson<T>(key: string, fallback: T): T {
