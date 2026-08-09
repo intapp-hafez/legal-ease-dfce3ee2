@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import logoAsset from "@/assets/logo.png.asset.json";
 
 export type Branding = {
   logoUrl: string;
@@ -9,7 +8,7 @@ export type Branding = {
 };
 
 export const defaultBranding: Branding = {
-  logoUrl: logoAsset.url,
+  logoUrl: "/logo.png",
   primary: "#E8791E",
   accent: "#6E6E73",
   sidebar: "#3A3A3F",
