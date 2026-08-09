@@ -3,9 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { tasks } from "@/lib/legal-data";
-import { useOptionList } from "@/lib/option-lists";
 
-const baseCategories = [
+const categories = [
   "إعداد عقود",
   "مراجعة عقود",
   "حضور جلسات",
@@ -38,7 +37,6 @@ export const Route = createFileRoute("/tasks")({
 
 function TasksPage() {
   const [filter, setFilter] = useState("");
-  const { options: categories, add: addCategory } = useOptionList("task-categories", baseCategories);
 
   return (
     <PageShell
@@ -62,14 +60,7 @@ function TasksPage() {
           fields={[
             { key: "no", label: "رقم المهمة", type: "mono", required: true },
             { key: "title", label: "العنوان", required: true },
-            {
-              key: "category",
-              label: "التصنيف",
-              type: "select",
-              options: categories,
-              onAddOption: addCategory,
-              addLabel: "إضافة تصنيف جديد",
-            },
+            { key: "category", label: "التصنيف", type: "select", options: categories },
             {
               key: "priority",
               label: "الأولوية",

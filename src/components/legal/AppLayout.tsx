@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Bell, LogOut, Menu, X } from "lucide-react";
+import { Bell, LogOut, Menu, Search, X } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
-import { GlobalSearch } from "./GlobalSearch";
 import { useAuth, roleLabel } from "@/lib/auth";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -39,7 +38,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {open ? <X className="size-4" /> : <Menu className="size-4" />}
           </button>
 
-          <GlobalSearch />
+          <div className="relative flex-1 max-w-xl">
+            <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              className="h-10 w-full rounded-lg border border-border bg-card pr-9 pl-3 text-sm outline-none transition-shadow placeholder:text-muted-foreground focus:ring-2 focus:ring-ring/40"
+              placeholder="بحث شامل: موظف، رقم عقد، مستند، قضية، رقم عهدة…"
+            />
+          </div>
 
           <button className="relative rounded-md border border-border p-2 text-foreground" aria-label="الإشعارات">
             <Bell className="size-4" />

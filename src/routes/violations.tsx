@@ -3,9 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { violations } from "@/lib/legal-data";
-import { useOptionList } from "@/lib/option-lists";
 
-const baseTypes = [
+const types = [
   "تنبيه شفهي",
   "إنذار أول",
   "إنذار ثانٍ",
@@ -32,7 +31,6 @@ export const Route = createFileRoute("/violations")({
 
 function ViolationsPage() {
   const [filter, setFilter] = useState("");
-  const { options: types, add: addType } = useOptionList("violation-types", baseTypes);
 
   return (
     <PageShell
@@ -57,14 +55,7 @@ function ViolationsPage() {
             { key: "no", label: "الرقم", type: "mono", required: true },
             { key: "employee", label: "الموظف", required: true },
             { key: "dept", label: "القسم" },
-            {
-              key: "type",
-              label: "نوع المخالفة",
-              type: "select",
-              options: types,
-              onAddOption: addType,
-              addLabel: "إضافة نوع جديد",
-            },
+            { key: "type", label: "نوع المخالفة", type: "select", options: types },
             { key: "date", label: "التاريخ", type: "date" },
             { key: "decision", label: "القرار" },
             {

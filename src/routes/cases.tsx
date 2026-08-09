@@ -2,9 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageShell } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { cases } from "@/lib/legal-data";
-import { useOptionList } from "@/lib/option-lists";
-
-const baseCaseTypes = ["تجاري", "عمالي", "مدني", "جنائي", "إداري", "ملكية فكرية"];
 
 export const Route = createFileRoute("/cases")({
   head: () => ({
@@ -22,8 +19,6 @@ export const Route = createFileRoute("/cases")({
 });
 
 function CasesPage() {
-  const { options: caseTypes, add: addCaseType } = useOptionList("case-types", baseCaseTypes);
-
   return (
     <PageShell
       title="القضايا القانونية"
@@ -57,9 +52,7 @@ function CasesPage() {
             key: "type",
             label: "النوع",
             type: "select",
-            options: caseTypes,
-            onAddOption: addCaseType,
-            addLabel: "إضافة نوع جديد",
+            options: ["تجاري", "عمالي", "مدني", "جنائي", "إداري", "ملكية فكرية"],
           },
           { key: "opponent", label: "الخصم" },
           { key: "court", label: "المحكمة" },

@@ -1,17 +1,5 @@
 import { useState } from "react";
-import {
-  ArrowUpDown,
-  Check,
-  Eye,
-  EyeOff,
-  Pencil,
-  Plus,
-  RotateCcw,
-  Search,
-  ShieldCheck,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Pencil, Plus, Trash2, X, RotateCcw } from "lucide-react";
 import { Panel } from "@/components/legal/PageShell";
 import {
   MODULES,
@@ -32,51 +20,11 @@ const emptyUser = (): User => ({
   active: true,
 });
 
-function normalizeArabicSearch(value: string) {
-  return value
-    .trim()
-    .toLocaleLowerCase("ar")
-    .replace(/[أإآ]/g, "ا")
-    .replace(/ة/g, "ه")
-    .replace(/(^|\s)ال/g, "$1")
-    .replace(/[ً-ْ]/g, "");
-}
-
 export function AccessControl() {
   const { users, matrix, saveUser, removeUser, setPerm, resetAccess, user } = useAuth();
   const canManage = user?.role === "super_admin";
   const [draft, setDraft] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<RoleId>("admin");
-  const [permissionSearch, setPermissionSearch] = useState("");
-  const [permissionSort, setPermissionSort] = useState<"default" | "name" | "enabled" | "disabled">("default");
-
-  const normalizedPermissionSearch = normalizeArabicSearch(permissionSearch);
-  const visibleModules = MODULES.filter((module) =>
-    normalizeArabicSearch(module.label).includes(normalizedPermissionSearch),
-  ).sort((a, b) => {
-    if (permissionSort === "name") return a.label.localeCompare(b.label, "ar");
-    if (permissionSort === "enabled" || permissionSort === "disabled") {
-      const aEnabled = matrix[selectedRole]?.[a.id]?.view || matrix[selectedRole]?.[a.id]?.edit ? 1 : 0;
-      const bEnabled = matrix[selectedRole]?.[b.id]?.view || matrix[selectedRole]?.[b.id]?.edit ? 1 : 0;
-      return permissionSort === "enabled" ? bEnabled - aEnabled : aEnabled - bEnabled;
-    }
-    return MODULES.indexOf(a) - MODULES.indexOf(b);
-  });
-
-  const enabledCount = MODULES.filter(
-    (module) => matrix[selectedRole]?.[module.id]?.view || matrix[selectedRole]?.[module.id]?.edit,
-  ).length;
-
-  function updateVisiblePermissions(mode: "view" | "edit" | "off") {
-    if (!canManage || selectedRole === "super_admin") return;
-    visibleModules.forEach((module) => {
-      setPerm(selectedRole, module.id, {
-        view: mode !== "off",
-        edit: mode === "edit",
-      });
-    });
-  }
 
   function submit() {
     if (!draft) return;
@@ -182,8 +130,8 @@ export function AccessControl() {
       </Panel>
 
       <Panel
-        title="محرر مصفوفة الصلاحيات"
-        subtitle="ابحث عن الوحدة ثم فعّل الوصول أو امنح صلاحية التعديل للدور المحدد"
+        title="مصفوفة الصلاحيات حسب الدور"
+        subtitle="تحديد صلاحية العرض والتعديل لكل وحدة"
         action={
           canManage ? (
             <button
@@ -196,125 +144,38 @@ export function AccessControl() {
           ) : null
         }
       >
-        <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
-          <aside className="space-y-2 border-b border-border pb-5 lg:border-b-0 lg:border-l lg:pb-0 lg:pl-5">
-            <p className="mb-3 text-xs font-semibold text-muted-foreground">اختر الدور</p>
-            {ROLES.map((role) => {
-              const active = selectedRole === role.id;
-              const roleEnabled = MODULES.filter(
-                (module) => matrix[role.id]?.[module.id]?.view || matrix[role.id]?.[module.id]?.edit,
-              ).length;
-              return (
-                <button
-                  key={role.id}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => setSelectedRole(role.id)}
-                  className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-3 text-right transition-colors ${
-                    active
-                      ? "border-primary bg-primary/10 text-[var(--primary-ink)]"
-                      : "border-transparent text-foreground hover:border-border hover:bg-secondary"
-                  }`}
-                >
-                  <span className="min-w-0">
-                    <span className="block text-xs font-semibold">{role.label}</span>
-                    <span className="mt-1 block text-[11px] text-muted-foreground">
-                      {roleEnabled} من {MODULES.length} وحدات
-                    </span>
-                  </span>
-                  {active ? <Check className="size-4 shrink-0" /> : null}
-                </button>
-              );
-            })}
-          </aside>
-
-          <div className="min-w-0">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="size-5 text-[var(--primary-ink)]" />
-                  <h3 className="text-sm font-bold text-foreground">{roleLabel(selectedRole)}</h3>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  الوصول مفعّل إلى {enabledCount} من أصل {MODULES.length} وحدات
-                </p>
-              </div>
-              {selectedRole === "super_admin" ? (
-                <span className="rounded-md border border-border bg-secondary px-2.5 py-1 text-xs text-muted-foreground">
-                  صلاحيات ثابتة كاملة
-                </span>
-              ) : null}
-            </div>
-
-            <div className="mb-3 flex flex-col gap-2 sm:flex-row">
-              <label className="relative min-w-0 flex-1">
-                <span className="sr-only">بحث في الوحدات</span>
-                <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  value={permissionSearch}
-                  onChange={(event) => setPermissionSearch(event.target.value)}
-                  placeholder="ابحث باسم الوحدة..."
-                  className="h-10 w-full rounded-lg border border-input bg-background pr-9 pl-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-                />
-              </label>
-              <label className="relative sm:w-52">
-                <span className="sr-only">ترتيب الصلاحيات</span>
-                <ArrowUpDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <select
-                  value={permissionSort}
-                  onChange={(event) => setPermissionSort(event.target.value as typeof permissionSort)}
-                  className="h-10 w-full appearance-none rounded-lg border border-input bg-background pr-9 pl-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/40"
-                >
-                  <option value="default">الترتيب الافتراضي</option>
-                  <option value="name">حسب اسم الوحدة</option>
-                  <option value="enabled">المفعّلة أولًا</option>
-                  <option value="disabled">المعطّلة أولًا</option>
-                </select>
-              </label>
-            </div>
-
-            {canManage && selectedRole !== "super_admin" ? (
-              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-secondary/50 p-2">
-                <span className="px-1 text-xs text-muted-foreground">تطبيق على النتائج ({visibleModules.length}):</span>
-                <button type="button" onClick={() => updateVisiblePermissions("view")} className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground hover:border-primary/40 hover:bg-primary/10">
-                  تفعيل العرض
-                </button>
-                <button type="button" onClick={() => updateVisiblePermissions("edit")} className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground hover:border-primary/40 hover:bg-primary/10">
-                  تفعيل العرض والتعديل
-                </button>
-                <button type="button" onClick={() => updateVisiblePermissions("off")} className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10">
-                  تعطيل الوصول
-                </button>
-              </div>
-            ) : null}
-
-            <div className="overflow-hidden rounded-lg border border-border">
-              <div className="grid grid-cols-[minmax(0,1fr)_92px_92px] border-b border-border bg-secondary/70 px-3 py-2 text-xs font-semibold text-muted-foreground">
-                <span>الوحدة</span>
-                <span className="text-center">الوصول</span>
-                <span className="text-center">التعديل</span>
-              </div>
-              {visibleModules.length ? (
-                visibleModules.map((module) => {
-                  const permission = matrix[selectedRole]?.[module.id] ?? { view: false, edit: false };
-                  return (
-                    <PermissionRow
-                      key={module.id}
-                      label={module.label}
-                      role={selectedRole}
-                      module={module.id}
-                      view={permission.view}
-                      edit={permission.edit}
-                      disabled={!canManage || selectedRole === "super_admin"}
-                      onChange={setPerm}
-                    />
-                  );
-                })
-              ) : (
-                <div className="px-4 py-10 text-center text-sm text-muted-foreground">لا توجد وحدة مطابقة للبحث.</div>
-              )}
-            </div>
-          </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-right text-sm">
+            <thead>
+              <tr className="border-b border-border text-xs text-muted-foreground">
+                <th className="px-3 py-2 font-medium">الوحدة</th>
+                {ROLES.map((r) => (
+                  <th key={r.id} className="px-3 py-2 font-medium">
+                    {r.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {MODULES.map((m) => (
+                <tr key={m.id} className="border-b border-border/70 last:border-0">
+                  <td className="px-3 py-2.5 font-medium text-foreground">{m.label}</td>
+                  {ROLES.map((r) => (
+                    <td key={r.id} className="px-3 py-2.5">
+                      <PermCell
+                        role={r.id}
+                        module={m.id}
+                        view={matrix[r.id]?.[m.id]?.view ?? false}
+                        edit={matrix[r.id]?.[m.id]?.edit ?? false}
+                        disabled={!canManage || r.id === "super_admin"}
+                        onChange={setPerm}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </Panel>
 
@@ -409,8 +270,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function PermissionRow({
-  label,
+function PermCell({
   role,
   module,
   view,
@@ -418,7 +278,6 @@ function PermissionRow({
   disabled,
   onChange,
 }: {
-  label: string;
   role: RoleId;
   module: ModuleId;
   view: boolean;
@@ -427,62 +286,25 @@ function PermissionRow({
   onChange: (role: RoleId, module: ModuleId, perm: { view: boolean; edit: boolean }) => void;
 }) {
   return (
-    <div className="grid min-h-14 grid-cols-[minmax(0,1fr)_92px_92px] items-center border-b border-border/70 px-3 last:border-0 hover:bg-secondary/40">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <span className={`flex size-8 shrink-0 items-center justify-center rounded-md ${view || edit ? "bg-primary/12 text-[var(--primary-ink)]" : "bg-secondary text-muted-foreground"}`}>
-          {view || edit ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-        </span>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-foreground">{label}</p>
-          <p className="text-[11px] text-muted-foreground">{view || edit ? (edit ? "عرض وتعديل" : "عرض فقط") : "لا يوجد وصول"}</p>
-        </div>
-      </div>
-      <div className="flex justify-center">
-        <PermissionSwitch
-          label={`الوصول إلى ${label}`}
-          checked={view || edit}
+    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+      <label className="flex items-center gap-1.5">
+        <input
+          type="checkbox"
+          checked={view}
           disabled={disabled}
-          onChange={(checked) => onChange(role, module, { view: checked, edit: checked ? edit : false })}
+          onChange={(e) => onChange(role, module, { view: e.target.checked, edit: e.target.checked ? edit : false })}
         />
-      </div>
-      <div className="flex justify-center">
-        <PermissionSwitch
-          label={`تعديل ${label}`}
+        عرض
+      </label>
+      <label className="flex items-center gap-1.5">
+        <input
+          type="checkbox"
           checked={edit}
           disabled={disabled}
-          onChange={(checked) => onChange(role, module, { view: checked ? true : view, edit: checked })}
+          onChange={(e) => onChange(role, module, { view: e.target.checked ? true : view, edit: e.target.checked })}
         />
-      </div>
+        تعديل
+      </label>
     </div>
-  );
-}
-
-function PermissionSwitch({
-  label,
-  checked,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  disabled: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-label={label}
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={`relative h-6 w-11 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-60 ${
-        checked ? "border-primary bg-primary" : "border-border bg-muted"
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 size-4.5 rounded-full bg-card shadow-sm transition-[right] ${checked ? "right-5" : "right-0.5"}`}
-      />
-    </button>
   );
 }

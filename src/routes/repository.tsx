@@ -3,9 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { repository } from "@/lib/legal-data";
-import { useOptionList } from "@/lib/option-lists";
 
-const baseFeatures = [
+const features = [
   "إدارة الإصدارات",
   "بحث OCR",
   "بحث في النص الكامل",
@@ -33,7 +32,6 @@ export const Route = createFileRoute("/repository")({
 
 function RepositoryPage() {
   const [featureFilter, setFeatureFilter] = useState("");
-  const { options: features, add: addFeature } = useOptionList("repository-features", baseFeatures);
 
   return (
     <PageShell
@@ -56,14 +54,7 @@ function RepositoryPage() {
           idPrefix="مجلد "
           fields={[
             { key: "folder", label: "المجلد", required: true },
-            {
-              key: "feature",
-              label: "الخاصية",
-              type: "select",
-              options: features,
-              onAddOption: addFeature,
-              addLabel: "إضافة خاصية جديدة",
-            },
+            { key: "feature", label: "الخاصية", type: "select", options: features },
             { key: "files", label: "عدد الملفات", type: "number" },
             { key: "size", label: "الحجم" },
             { key: "updated", label: "آخر تحديث", type: "date" },
