@@ -5,6 +5,7 @@ import { useOptionList } from "@/lib/option-lists";
 import { useProfilesOptions } from "@/lib/useSupabase";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { EmployeeCell } from "@/components/legal/EmployeeCell";
 
 const baseCaseTypes = ["تجاري", "عمالي", "مدني", "جنائي", "إداري", "ملكية فكرية"];
 
@@ -85,7 +86,13 @@ function CasesPage() {
           { key: "opponent", label: "الخصم" },
           { key: "court", label: "المحكمة" },
           { key: "firm", label: "مكتب المحاماة" },
-          { key: "lawyer_id", label: "المحامي", type: "select", options: profilesOptions },
+          {
+            key: "lawyer_id",
+            label: "المحامي",
+            type: "select",
+            options: profilesOptions,
+            render: (val: any) => <EmployeeCell employeeId={val} />,
+          },
           { key: "start_date", label: "البداية", type: "date" },
           { key: "hearing_date", label: "الجلسة القادمة", type: "date" },
           { key: "value", label: "القيمة", type: "number" },

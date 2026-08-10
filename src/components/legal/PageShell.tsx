@@ -36,11 +36,11 @@ export function Panel({
   children,
   className = "",
 }: {
-  title?: string;
-  subtitle?: string;
-  action?: ReactNode;
+  title?: string | undefined;
+  subtitle?: string | undefined;
+  action?: ReactNode | undefined;
   children: ReactNode;
-  className?: string;
+  className?: string | undefined;
 }) {
   return (
     <section

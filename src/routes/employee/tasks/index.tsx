@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useOptionList } from "@/lib/option-lists";
 import { SearchSelect } from "@/components/legal/SearchSelect";
 import { useProfilesOptions } from "@/lib/useSupabase";
+import { formatDate } from "@/lib/date-utils";
 
 export const Route = createFileRoute("/employee/tasks/")({
   head: () => ({
@@ -191,7 +192,7 @@ function EmployeeTasksPage() {
                   <span key="title" className="font-medium">{t.title}</span>,
                   <span key="creator" className="font-medium text-primary">{t.creator?.full_name || "غير محدد"}</span>,
                   <span key="dept" className="text-muted-foreground">{t.creator?.department || "—"}</span>,
-                  <span key="date" className="text-muted-foreground text-sm">{new Date(t.created_at).toLocaleDateString("en-GB")}</span>,
+                  <span key="date" className="text-muted-foreground text-sm font-mono">{formatDate(t.created_at)}</span>,
                   <StatusPill key="status" value={t.status} />,
                 ])}
               />
@@ -210,7 +211,7 @@ function EmployeeTasksPage() {
                 rows={ownTasks.map((t: any) => [
                   <span key="title" className="font-medium">{t.title}</span>,
                   <span key="priority" className="text-muted-foreground">{t.priority}</span>,
-                  <span key="date" className="text-muted-foreground text-sm">{new Date(t.created_at).toLocaleDateString("en-GB")}</span>,
+                  <span key="date" className="text-muted-foreground text-sm font-mono">{formatDate(t.created_at)}</span>,
                   <StatusPill key="status" value={t.status} />,
                   <div key="progress" className="flex items-center gap-2">
                     <div className="h-2 w-16 overflow-hidden rounded-full bg-secondary">
@@ -239,7 +240,7 @@ function EmployeeTasksPage() {
                   <span key="title" className="font-medium">{t.title}</span>,
                   <span key="assignee" className="font-medium text-primary">{t.assignee?.full_name || "غير محدد"}</span>,
                   <span key="dept" className="text-muted-foreground">{t.assignee?.department || "—"}</span>,
-                  <span key="date" className="text-muted-foreground text-sm">{new Date(t.created_at).toLocaleDateString("en-GB")}</span>,
+                  <span key="date" className="text-muted-foreground text-sm font-mono">{formatDate(t.created_at)}</span>,
                   <StatusPill key="status" value={t.status} />,
                 ])}
               />
@@ -285,7 +286,7 @@ function EmployeeTasksPage() {
                     label="التصنيف"
                     allLabel="كل التصنيفات"
                     value={draft.category} 
-                    onChange={(val) => setDraft({ ...draft, category: val })}
+                    onChange={(val: string) => setDraft({ ...draft, category: val })}
                     options={categories}
                     onAddOption={addCategory}
                     addLabel="إضافة تصنيف جديد"

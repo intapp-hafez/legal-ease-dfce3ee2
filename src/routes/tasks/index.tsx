@@ -4,6 +4,7 @@ import { PageShell, Panel } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { useOptionList } from "@/lib/option-lists";
 import { useProfilesOptions } from "@/lib/useSupabase";
+import { EmployeeCell } from "@/components/legal/EmployeeCell";
 
 const baseCategories = [
   "إعداد عقود",
@@ -120,6 +121,7 @@ function TasksPage() {
               label: "المسؤول",
               type: "select",
               options: profiles,
+              render: (val: any) => <EmployeeCell employeeId={val} />,
             },
             {
               key: "created_by",
@@ -127,6 +129,7 @@ function TasksPage() {
               type: "select",
               options: profiles,
               hideInForm: true,
+              render: (val: any) => <EmployeeCell employeeId={val} />,
             },
             { key: "due_date", label: "الاستحقاق", type: "date" },
             { key: "progress", label: "الإنجاز", type: "progress" },

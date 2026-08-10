@@ -5,6 +5,8 @@ import { PageShell, Panel, StatusPill } from "@/components/legal/PageShell";
 import { useAuth } from "@/lib/auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { EmployeeCell } from "@/components/legal/EmployeeCell";
+import { formatDate, formatDateTime } from "@/lib/date-utils";
 
 export const Route = createFileRoute("/employee/tasks/$taskId")({
   component: TaskDetailsPage,
@@ -165,13 +167,13 @@ function TaskDetailsPage() {
                 <span className="text-muted-foreground">رقم المهمة:</span>
                 <span className="font-medium text-primary">{task.no}</span>
               </div>
-              <div className="flex justify-between border-b pb-2">
+              <div className="flex justify-between border-b pb-2 items-center">
                 <span className="text-muted-foreground">المنشئ (مفوضة من):</span>
-                <span className="font-medium">{task.creator?.full_name || "—"}</span>
+                <EmployeeCell employeeId={task.created_by} />
               </div>
-              <div className="flex justify-between border-b pb-2">
+              <div className="flex justify-between border-b pb-2 items-center">
                 <span className="text-muted-foreground">المسؤول (مسندة إلى):</span>
-                <span className="font-medium">{task.assignee?.full_name || "—"}</span>
+                <EmployeeCell employeeId={task.assignee_id} />
               </div>
               <div className="flex justify-between border-b pb-2">
                 <span className="text-muted-foreground">الأولوية:</span>
@@ -179,7 +181,7 @@ function TaskDetailsPage() {
               </div>
               <div className="flex justify-between border-b pb-2">
                 <span className="text-muted-foreground">تاريخ الاستحقاق:</span>
-                <span className="font-medium">{task.due_date || "—"}</span>
+                <span className="font-medium font-mono">{formatDate(task.due_date)}</span>
               </div>
               {task.description && (
                 <div className="flex flex-col gap-2 border-b pb-2">
@@ -255,8 +257,8 @@ function TaskDetailsPage() {
                           <span className="ml-2 text-xs bg-secondary px-2 py-0.5 rounded-full text-foreground">تحديث حالة</span>
                         )}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(note.created_at).toLocaleString("ar-SA")}
+                      <span className="text-xs text-muted-foreground font-mono">
+                        {formatDateTime(note.created_at)}
                       </span>
                     </div>
                     <p className="whitespace-pre-wrap text-sm text-foreground">{note.content}</p>

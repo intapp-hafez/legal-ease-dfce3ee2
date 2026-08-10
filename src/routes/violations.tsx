@@ -4,6 +4,7 @@ import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { useOptionList } from "@/lib/option-lists";
 import { useProfilesOptions } from "@/lib/useSupabase";
+import { EmployeeCell } from "@/components/legal/EmployeeCell";
 
 const baseTypes = [
   "تنبيه شفهي",
@@ -57,7 +58,14 @@ function ViolationsPage() {
           idPrefix="VL-"
           fields={[
             { key: "no", label: "الرقم", type: "mono", required: true },
-            { key: "employee_id", label: "الموظف", type: "select", options: profilesOptions, required: true },
+            {
+              key: "employee_id",
+              label: "الموظف",
+              type: "select",
+              options: profilesOptions,
+              required: true,
+              render: (val: any) => <EmployeeCell employeeId={val} />,
+            },
             {
               key: "type",
               label: "نوع المخالفة",

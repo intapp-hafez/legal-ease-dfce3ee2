@@ -13,6 +13,11 @@ import {
   ListChecks,
   AlarmClock,
   CalendarDays,
+  Files,
+  FileText,
+  ShieldCheck,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Bar,
@@ -29,7 +34,7 @@ import { EmployeeDashboard } from "@/components/legal/EmployeeDashboard";
 
 import { PageShell, Panel, StatusPill } from "@/components/legal/PageShell";
 import { useAdminDashboard } from "@/hooks/useDashboard";
-import { repository, contractsByMonth } from "@/lib/legal-data";
+import { contractsByMonth } from "@/lib/legal-data";
 import { useNotifications } from "@/lib/useNotifications";
 
 export const Route = createFileRoute("/")({
@@ -54,6 +59,11 @@ const icons: Record<string, React.ComponentType<{ className?: string }>> = {
   users: Users,
   fileCheck: FileCheck2,
   clock: Clock,
+  files: Files,
+  fileText: FileText,
+  shield: ShieldCheck,
+  checkCircle: CheckCircle2,
+  alertTriangle: AlertTriangle,
   fileX: FileX2,
   penLine: PenLine,
   package: Package,
@@ -132,12 +142,21 @@ function AdminDashboard() {
 
   const {
     totalProfiles,
+    insuredProfiles,
     activeContracts,
+    expiringContracts,
+    totalDocuments,
     totalAssets,
+    assignedAssets,
     openCases,
-    todayTasks: countTodayTasks,
+    totalViolations,
+    totalRequests,
+    newTasks,
+    inProgressTasks,
     lateTasks,
+    completedTasks,
     recentActivities,
+    repositoryFolders,
     upcomingExpirations,
     tasksList,
     assetsByCategory,
@@ -146,10 +165,15 @@ function AdminDashboard() {
   const dynamicKpis = [
     { label: "إجمالي الموظفين", value: totalProfiles, icon: "users", tone: "default" },
     { label: "العقود النشطة", value: activeContracts, icon: "fileCheck", tone: "success" },
-    { label: "عقود مسندة", value: activeContracts, icon: "penLine", tone: "warning" },
+    { label: "مستندات الشركة", value: totalDocuments, icon: "files", tone: "default" },
+    { label: "قضايا مفتوحة", value: openCases, icon: "gavel", tone: "warning" },
     { label: "إجمالي العهد", value: totalAssets, icon: "package", tone: "default" },
-    { label: "قضايا مفتوحة", value: openCases, icon: "gavel", tone: "default" },
-    { label: "مهام جديدة", value: countTodayTasks, icon: "listChecks", tone: "success" },
+    { label: "الطلبات القانونية", value: totalRequests, icon: "fileText", tone: "default" },
+    { label: "عقود تنتهي قريباً", value: expiringContracts, icon: "clock", tone: "warning" },
+    { label: "موظفون مؤمن عليهم", value: insuredProfiles, icon: "shield", tone: "success" },
+    { label: "مهام قيد التنفيذ", value: inProgressTasks, icon: "listChecks", tone: "default" },
+    { label: "مهام مكتملة", value: completedTasks, icon: "checkCircle", tone: "success" },
+    { label: "مخالفات مسجلة", value: totalViolations, icon: "alertTriangle", tone: "warning" },
     { label: "مهام متأخرة", value: lateTasks, icon: "alarmClock", tone: "danger" },
   ] as const;
 
@@ -336,10 +360,10 @@ function AdminDashboard() {
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <Panel title="آخر الأنشطة" subtitle="سجل التدقيق المختصر">
           <ul className="space-y-3">
-            {recentActivities.length === 0 ? (
+            {(recentActivities || []).length === 0 ? (
               <li className="text-xs text-muted-foreground">لا يوجد نشاط حديث.</li>
             ) : null}
-            {recentActivities.map((a: any, i: number) => (
+            {(recentActivities || []).map((a: any, i: number) => (
               <li key={i} className="flex gap-3">
                 <span className="mt-1.5 size-2 shrink-0 rounded-full bg-accent" />
                 <div>
@@ -355,7 +379,7 @@ function AdminDashboard() {
 
         <Panel title="مستندات مرفوعة حديثًا">
           <ul className="grid gap-2 sm:grid-cols-2">
-            {repository.slice(0, 6).map((r) => (
+            {(repositoryFolders || []).slice(0, 6).map((r: any) => (
               <li
                 key={r.folder}
                 className="rounded-lg border border-border px-3 py-2.5 text-sm"

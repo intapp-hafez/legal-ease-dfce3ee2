@@ -9,6 +9,8 @@ import { useSupabaseCollection } from "@/lib/useSupabase";
 import { downloadTemplate } from "@/lib/excel";
 import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/lib/auth";
+import { EmployeeCell } from "@/components/legal/EmployeeCell";
+import { formatDate } from "@/lib/date-utils";
 
 export type Field = {
   key: string;
@@ -21,6 +23,7 @@ export type Field = {
   onAddOption?: (value: string) => string | null | void;
   addLabel?: string;
   accept?: string;
+  render?: (value: any, row: any) => ReactNode;
 };
 
 type Props<T extends Row> = {
@@ -41,6 +44,17 @@ type Props<T extends Row> = {
   filters?: Record<string, string>;
   onRowClick?: (row: T) => void;
 };
+
+function breakEveryWords(text: string | null | undefined, wordsPerLine = 4): string {
+  if (!text || typeof text !== "string") return String(text ?? "—");
+  const words = text.trim().split(/\s+/);
+  if (words.length <= wordsPerLine) return text;
+  const lines: string[] = [];
+  for (let i = 0; i < words.length; i += wordsPerLine) {
+    lines.push(words.slice(i, i + wordsPerLine).join(" "));
+  }
+  return lines.join("\n");
+}
 
 function emptyRow(fields: Field[]): Row {
   const r: Row = {};
@@ -111,7 +125,15 @@ export function CrudTable<T extends Row>({
   function openCreate() {
     setEditingId(null);
     const seq = sequenceKey || idKey;
-    setDraft({ ...emptyRow(fields), [seq]: nextId(items, seq, idPrefix) });
+    const initial = emptyRow(fields);
+    if (filters) {
+      for (const [k, v] of Object.entries(filters)) {
+        if (v !== undefined && v !== null && v !== "") {
+          initial[k] = v;
+        }
+      }
+    }
+    setDraft({ ...initial, [seq]: nextId(items, seq, idPrefix) });
     setError(null);
     setOpen(true);
   }
@@ -130,7 +152,7 @@ export function CrudTable<T extends Row>({
         return;
       }
     }
-    const value = draft as T;
+    const value = { ...(filters || {}), ...draft } as T;
     if (editingId) update(editingId, value);
     else {
       if (items.some((it) => String(it[idKey]) === String(value[idKey]))) {
@@ -148,11 +170,15 @@ export function CrudTable<T extends Row>({
 
   function renderCell(f: Field, row: T) {
     const v = row[f.key];
+    if (f.render) return f.render(v, row);
     if (f.type === "status") return <StatusPill value={String(v)} />;
-    if (f.type === "mono")
+    if (f.type === "date" || (typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v))) {
+      return <span className="font-mono text-xs text-foreground">{formatDate(v as string)}</span>;
+    }
+    if (f.type === "mono" && f.key !== "employee_id" && f.key !== "assignee_id" && f.key !== "created_by")
       return <span className="font-mono text-xs text-muted-foreground">{String(v)}</span>;
     if (f.type === "select" && Array.isArray(f.options)) {
-      const option = f.options.find((o) => typeof o === "object" && o.value === String(v));
+      const option = f.options.find((o) => typeof o === "object" && (o.value === String(v) || o.value?.toLowerCase() === String(v)?.toLowerCase()));
       if (option && typeof option === "object") {
         return <span>{option.label}</span>;
       }
@@ -169,6 +195,36 @@ export function CrudTable<T extends Row>({
           <span className="text-xs text-muted-foreground">{Number(v) || 0}%</span>
         </div>
       );
+
+    const vStr = String(v ?? "").trim();
+    const isIdField =
+      f.key.endsWith("_id") ||
+      f.key === "created_by" ||
+      f.key === "owner" ||
+      f.key === "lawyer" ||
+      f.key === "assignee" ||
+      f.key === "employee";
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(vStr);
+
+    if ((isIdField || isUuid) && vStr) {
+      return <EmployeeCell employeeId={vStr} />;
+    }
+
+    if (
+      f.type === "textarea" ||
+      f.key === "description" ||
+      f.key === "details" ||
+      f.key === "decision" ||
+      f.key === "notes" ||
+      (typeof v === "string" && v.trim().split(/\s+/).length > 4 && !isUuid && !isIdField && f.type !== "mono")
+    ) {
+      return (
+        <div className="whitespace-pre-line text-sm leading-relaxed" dir="rtl">
+          {breakEveryWords(String(v), 4)}
+        </div>
+      );
+    }
+
     return <span>{String(v ?? "—")}</span>;
   }
 
@@ -280,7 +336,18 @@ export function CrudTable<T extends Row>({
                 }}
               >
                 {fields.map((f) => (
-                  <td key={f.key} className="whitespace-nowrap px-3 py-3 text-foreground">
+                  <td
+                    key={f.key}
+                    className={`px-3 py-3 text-foreground ${
+                      f.type === "textarea" ||
+                      f.key === "description" ||
+                      f.key === "details" ||
+                      f.key === "decision" ||
+                      f.key === "notes"
+                        ? "whitespace-normal min-w-[200px] max-w-[340px]"
+                        : "whitespace-nowrap"
+                    }`}
+                  >
                     {renderCell(f, row)}
                   </td>
                 ))}

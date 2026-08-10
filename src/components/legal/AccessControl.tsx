@@ -22,6 +22,7 @@ import {
   type RoleId,
   type User,
 } from "@/lib/auth";
+import { EmployeeFieldPermissionsModal } from "@/components/legal/EmployeeFieldPermissionsModal";
 
 const emptyUser = (): User => ({
   id: `U-${Date.now().toString().slice(-5)}`,
@@ -46,6 +47,7 @@ export function AccessControl() {
   const { users, matrix, saveUser, removeUser, setPerm, resetAccess, user } = useAuth();
   const canManage = user?.role === "super_admin";
   const [draft, setDraft] = useState<User | null>(null);
+  const [permsUser, setPermsUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<RoleId>("admin");
   const [permissionSearch, setPermissionSearch] = useState("");
@@ -143,14 +145,23 @@ export function AccessControl() {
                   </td>
                   {canManage ? (
                     <td className="px-3 py-2.5">
-                      <div className="flex gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          aria-label={`صلاحيات حقول بيانات الموظفين لـ ${u.name}`}
+                          title="تحديد الحقول المرئية للموظفين لهذا المستخدم"
+                          onClick={() => setPermsUser(u)}
+                          className="rounded-md border border-border p-1.5 text-primary hover:bg-primary/10 transition-colors"
+                        >
+                          <Eye className="size-3.5" />
+                        </button>
                         <button
                           aria-label={`تعديل ${u.name}`}
                           onClick={() => {
                             setDraft({ ...u });
                             setError(null);
                           }}
-                          className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary"
+                          className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary transition-colors"
                         >
                           <Pencil className="size-3.5" />
                         </button>
@@ -390,6 +401,12 @@ export function AccessControl() {
           </div>
         </div>
       ) : null}
+
+      <EmployeeFieldPermissionsModal
+        user={permsUser}
+        open={!!permsUser}
+        onClose={() => setPermsUser(null)}
+      />
     </div>
   );
 }

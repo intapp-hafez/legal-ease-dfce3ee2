@@ -21,6 +21,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as ViolationsRouteImport } from './routes/violations'
 import { Route as ContractsContractIdRouteImport } from './routes/contracts/$contractId'
+import { Route as EmployeeEmployeeIdRouteImport } from './routes/employee/$employeeId'
 import { Route as EmployeeCustodyRouteImport } from './routes/employee/custody'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks/$taskId'
@@ -87,6 +88,11 @@ const ContractsContractIdRoute = ContractsContractIdRouteImport.update({
   path: '/$contractId',
   getParentRoute: () => ContractsRoute,
 } as any)
+const EmployeeEmployeeIdRoute = EmployeeEmployeeIdRouteImport.update({
+  id: '/employee/$employeeId',
+  path: '/employee/$employeeId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EmployeeCustodyRoute = EmployeeCustodyRouteImport.update({
   id: '/employee/custody',
   path: '/employee/custody',
@@ -126,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/tasks': typeof TasksRouteWithChildren
   '/violations': typeof ViolationsRoute
   '/contracts/$contractId': typeof ContractsContractIdRoute
+  '/employee/$employeeId': typeof EmployeeEmployeeIdRoute
   '/employee/custody': typeof EmployeeCustodyRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/tasks/': typeof TasksIndexRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/violations': typeof ViolationsRoute
   '/contracts/$contractId': typeof ContractsContractIdRoute
+  '/employee/$employeeId': typeof EmployeeEmployeeIdRoute
   '/employee/custody': typeof EmployeeCustodyRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/tasks': typeof TasksIndexRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/tasks': typeof TasksRouteWithChildren
   '/violations': typeof ViolationsRoute
   '/contracts/$contractId': typeof ContractsContractIdRoute
+  '/employee/$employeeId': typeof EmployeeEmployeeIdRoute
   '/employee/custody': typeof EmployeeCustodyRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/tasks/': typeof TasksIndexRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/violations'
     | '/contracts/$contractId'
+    | '/employee/$employeeId'
     | '/employee/custody'
     | '/tasks/$taskId'
     | '/tasks/'
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/violations'
     | '/contracts/$contractId'
+    | '/employee/$employeeId'
     | '/employee/custody'
     | '/tasks/$taskId'
     | '/tasks'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/violations'
     | '/contracts/$contractId'
+    | '/employee/$employeeId'
     | '/employee/custody'
     | '/tasks/$taskId'
     | '/tasks/'
@@ -241,6 +253,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   TasksRoute: typeof TasksRouteWithChildren
   ViolationsRoute: typeof ViolationsRoute
+  EmployeeEmployeeIdRoute: typeof EmployeeEmployeeIdRoute
   EmployeeCustodyRoute: typeof EmployeeCustodyRoute
   EmployeeTasksTaskIdRoute: typeof EmployeeTasksTaskIdRoute
   EmployeeTasksIndexRoute: typeof EmployeeTasksIndexRoute
@@ -332,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContractsContractIdRouteImport
       parentRoute: typeof ContractsRoute
     }
+    '/employee/$employeeId': {
+      id: '/employee/$employeeId'
+      path: '/employee/$employeeId'
+      fullPath: '/employee/$employeeId'
+      preLoaderRoute: typeof EmployeeEmployeeIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/employee/custody': {
       id: '/employee/custody'
       path: '/employee/custody'
@@ -406,6 +426,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   TasksRoute: TasksRouteWithChildren,
   ViolationsRoute: ViolationsRoute,
+  EmployeeEmployeeIdRoute: EmployeeEmployeeIdRoute,
   EmployeeCustodyRoute: EmployeeCustodyRoute,
   EmployeeTasksTaskIdRoute: EmployeeTasksTaskIdRoute,
   EmployeeTasksIndexRoute: EmployeeTasksIndexRoute,

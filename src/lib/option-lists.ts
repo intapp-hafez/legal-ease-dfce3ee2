@@ -29,54 +29,127 @@ export function useOptionList(key: string, base: string[]): OptionListApi {
   const { data: options = base } = useQuery({
     queryKey: ["settings", dbKey],
     queryFn: async () => {
-      const { data } = await supabase.from("settings").select("value").eq("key", dbKey).single();
-      if (data?.value && Array.isArray(data.value)) return data.value as string[];
+      // 1. Try Supabase
+      try {
+        const { data, error } = await supabase
+          .from("settings")
+          .select("value")
+          .eq("key", dbKey)
+          .maybeSingle();
+
+        if (!error && data?.value && Array.isArray(data.value)) {
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(dbKey, JSON.stringify(data.value));
+          }
+          return data.value as string[];
+        }
+      } catch (e) {
+        console.warn("Supabase fetch error for settings:", e);
+      }
+
+      // 2. Fallback to localStorage
+      if (typeof window !== "undefined") {
+        const local = window.localStorage.getItem(dbKey);
+        if (local) {
+          try {
+            const parsed = JSON.parse(local);
+            if (Array.isArray(parsed)) return parsed as string[];
+          } catch {}
+        }
+      }
+
       return base;
-    }
+    },
+    initialData: () => {
+      if (typeof window !== "undefined") {
+        const local = window.localStorage.getItem(dbKey);
+        if (local) {
+          try {
+            const parsed = JSON.parse(local);
+            if (Array.isArray(parsed)) return parsed as string[];
+          } catch {}
+        }
+      }
+      return base;
+    },
   });
 
   const mutation = useMutation({
     mutationFn: async (newList: string[]) => {
-      await supabase.from("settings").upsert({ key: dbKey, value: newList });
+      // 1. Save to localStorage immediately
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(dbKey, JSON.stringify(newList));
+      }
+
+      // 2. Try Supabase sync
+      try {
+        const { error } = await supabase.from("settings").upsert({ key: dbKey, value: newList });
+        if (error) console.warn("Supabase settings upsert error (using local):", error.message);
+      } catch (e) {
+        console.warn("Supabase settings upsert exception (using local):", e);
+      }
+
       return newList;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings", dbKey] })
+    onMutate: async (newList) => {
+      await queryClient.cancelQueries({ queryKey: ["settings", dbKey] });
+      const prev = queryClient.getQueryData<string[]>(["settings", dbKey]);
+      queryClient.setQueryData(["settings", dbKey], newList);
+      return { prev };
+    },
+    onError: (_err, _newList, context) => {
+      if (context?.prev) {
+        queryClient.setQueryData(["settings", dbKey], context.prev);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings", dbKey] });
+    },
   });
 
   const add = useCallback(
     (value: string) => {
       const v = value.trim();
       if (!v) return "الرجاء إدخال اسم صالح.";
-      if (options.some((o) => normalizeOptionValue(o) === normalizeOptionValue(v)))
-        return `الاسم «${v}» موجود مسبقًا، لا يمكن التكرار.`;
-      mutation.mutate([...options, v]);
+      if (options.some((o) => normalizeOptionValue(o) === normalizeOptionValue(v))) {
+        return `العنصر «${v}» موجود مسبقًا، لا يمكن التكرار.`;
+      }
+      const next = [...options, v];
+      mutation.mutate(next);
       return null;
     },
     [options, mutation],
   );
 
   const rename = useCallback(
-    (oldValue: string, next: string) => {
-      const v = next.trim();
+    (oldValue: string, nextValue: string) => {
+      const v = nextValue.trim();
       if (!v) return "الرجاء إدخال اسم صالح.";
       if (
         options.some(
           (o) => o !== oldValue && normalizeOptionValue(o) === normalizeOptionValue(v),
         )
-      )
-        return `الاسم «${v}» موجود مسبقًا، لا يمكن التكرار.`;
-      mutation.mutate(options.map((o) => (o === oldValue ? v : o)));
+      ) {
+        return `العنصر «${v}» موجود مسبقًا، لا يمكن التكرار.`;
+      }
+      const next = options.map((o) => (o === oldValue ? v : o));
+      mutation.mutate(next);
       return null;
     },
     [options, mutation],
   );
 
   const remove = useCallback(
-    (value: string) => mutation.mutate(options.filter((o) => o !== value)),
+    (value: string) => {
+      const next = options.filter((o) => o !== value);
+      mutation.mutate(next);
+    },
     [options, mutation],
   );
 
-  const reset = useCallback(() => mutation.mutate(base), [base, mutation]);
+  const reset = useCallback(() => {
+    mutation.mutate(base);
+  }, [base, mutation]);
 
   return { options, add, rename, remove, reset };
 }

@@ -122,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const [matrix, setMatrix] = useState<RoleMatrix>(defaultMatrix);
+  const [matrix, setMatrix] = useState<RoleMatrix>(() => readJson(MATRIX_KEY, defaultMatrix));
 
   const fetchUsers = useCallback(async () => {
     const { data } = await supabase.from("profiles").select("*");
@@ -140,24 +140,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const fetchMatrix = useCallback(async () => {
-    const { data } = await supabase.from("role_permissions").select("*");
-    if (data && data.length > 0) {
-      const newMatrix = JSON.parse(JSON.stringify(defaultMatrix)) as RoleMatrix;
-      // Reset everything to false first
-      (Object.keys(newMatrix) as RoleId[]).forEach((r) => {
-        (Object.keys(newMatrix[r]) as ModuleId[]).forEach((m) => {
-          newMatrix[r][m] = { view: false, edit: false };
+    try {
+      // 1. Try Supabase role_permissions
+      const { data: permData, error: permError } = await supabase.from("role_permissions").select("*");
+      if (!permError && permData && permData.length > 0) {
+        const newMatrix = JSON.parse(JSON.stringify(defaultMatrix)) as RoleMatrix;
+        // Reset everything to false first
+        (Object.keys(newMatrix) as RoleId[]).forEach((r) => {
+          (Object.keys(newMatrix[r]) as ModuleId[]).forEach((m) => {
+            newMatrix[r][m] = { view: false, edit: false };
+          });
         });
-      });
-      // Populate from DB
-      data.forEach((row: any) => {
-        const [mod, action] = row.permission.split(":");
-        if (newMatrix[row.role as RoleId]?.[mod as ModuleId]) {
-          newMatrix[row.role as RoleId][mod as ModuleId][action as "view" | "edit"] = true;
-        }
-      });
-      setMatrix(newMatrix);
+        // Populate from DB
+        permData.forEach((row: any) => {
+          const [mod, action] = row.permission.split(":");
+          if (newMatrix[row.role as RoleId]?.[mod as ModuleId]) {
+            newMatrix[row.role as RoleId][mod as ModuleId][action as "view" | "edit"] = true;
+          }
+        });
+        setMatrix(newMatrix);
+        writeJson(MATRIX_KEY, newMatrix);
+        return;
+      }
+
+      // 2. Try Supabase settings table
+      const { data: settingData, error: settingError } = await supabase.from("settings").select("value").eq("key", "role-matrix").maybeSingle();
+      if (!settingError && settingData?.value) {
+        setMatrix(settingData.value as RoleMatrix);
+        writeJson(MATRIX_KEY, settingData.value);
+        return;
+      }
+    } catch (e) {
+      console.warn("Could not fetch permissions from Supabase:", e);
     }
+
+    // 3. Fallback to localStorage
+    const local = readJson<RoleMatrix>(MATRIX_KEY, defaultMatrix);
+    setMatrix(local);
   }, []);
 
   useEffect(() => {
@@ -254,24 +273,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setPerm = useCallback(async (role: RoleId, module: ModuleId, perm: Perm) => {
+    let nextMatrix: RoleMatrix = defaultMatrix;
     setMatrix((prev) => {
-      const next: RoleMatrix = { ...prev, [role]: { ...prev[role], [module]: perm } };
-      return next;
+      nextMatrix = { ...prev, [role]: { ...prev[role], [module]: perm } };
+      writeJson(MATRIX_KEY, nextMatrix);
+      return nextMatrix;
     });
 
-    // Delete existing perms for this role/module
-    await supabase.from("role_permissions")
-      .delete()
-      .eq("role", role)
-      .like("permission", `${module}:%`);
+    try {
+      // 1. Try role_permissions table
+      await supabase.from("role_permissions")
+        .delete()
+        .eq("role", role)
+        .like("permission", `${module}:%`);
 
-    // Insert new perms
-    const inserts = [];
-    if (perm.view) inserts.push({ role, permission: `${module}:view` });
-    if (perm.edit) inserts.push({ role, permission: `${module}:edit` });
-    
-    if (inserts.length > 0) {
-      await supabase.from("role_permissions").insert(inserts);
+      const inserts = [];
+      if (perm.view) inserts.push({ role, permission: `${module}:view` });
+      if (perm.edit) inserts.push({ role, permission: `${module}:edit` });
+      
+      if (inserts.length > 0) {
+        await supabase.from("role_permissions").insert(inserts);
+      }
+    } catch (e) {
+      console.warn("Supabase role_permissions sync error:", e);
+    }
+
+    try {
+      // 2. Also backup to settings table
+      await supabase.from("settings").upsert({ key: "role-matrix", value: nextMatrix });
+    } catch (e) {
+      console.warn("Supabase settings sync error:", e);
     }
 
     logAudit({
@@ -282,13 +313,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, [user]);
 
-  const resetAccess = useCallback(() => {
+  const resetAccess = useCallback(async () => {
     setUsers(seedUsers);
     setMatrix(defaultMatrix);
     writeJson(USERS_KEY, seedUsers);
     writeJson(MATRIX_KEY, defaultMatrix);
-    logAudit({ action: "استعادة إعدادات الصلاحيات", target: "الإعدادات" });
-  }, []);
+    try {
+      await supabase.from("settings").upsert({ key: "role-matrix", value: defaultMatrix });
+    } catch {}
+    logAudit({ action: "استعادة إعدادات الصلاحيات", target: "الإعدادات", user_id: user?.id || undefined });
+  }, [user]);
 
   const value: AuthCtx = {
     ready,

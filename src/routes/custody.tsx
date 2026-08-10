@@ -6,6 +6,7 @@ import { CrudTable } from "@/components/legal/CrudTable";
 import { SearchSelect } from "@/components/legal/SearchSelect";
 import { useCategories, useStatuses } from "@/lib/custody-options";
 import { useProfilesOptions } from "@/lib/useSupabase";
+import { EmployeeCell } from "@/components/legal/EmployeeCell";
 
 export const Route = createFileRoute("/custody")({
   head: () => ({
@@ -89,7 +90,13 @@ function CustodyPage() {
             { key: "name", label: "الاسم", required: true },
             { key: "category", label: "الفئة", type: "select", options: categories },
             { key: "serial_number", label: "الرقم التسلسلي", type: "mono" },
-            { key: "employee_id", label: "الموظف", type: "select", options: profilesOptions },
+            {
+              key: "employee_id",
+              label: "الموظف",
+              type: "select",
+              options: profilesOptions,
+              render: (val: any) => <EmployeeCell employeeId={val} />,
+            },
             { key: "assigned_date", label: "تاريخ الإسناد", type: "date" },
             { key: "expected_return_date", label: "الإرجاع المتوقع", type: "date" },
             {
