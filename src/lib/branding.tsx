@@ -1,4 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export type Branding = {
   logoUrl: string;
@@ -14,7 +16,7 @@ export const defaultBranding: Branding = {
   sidebar: "#3A3A3F",
 };
 
-const STORAGE_KEY = "int-legal-branding";
+const DB_KEY = "branding";
 
 /* ---------- color helpers (WCAG contrast) ---------- */
 
@@ -113,45 +115,44 @@ export function applyBranding(b: Branding) {
 }
 
 export function BrandingProvider({ children }: { children: React.ReactNode }) {
-  const [branding, setState] = useState<Branding>(defaultBranding);
+  const queryClient = useQueryClient();
+
+  const { data: branding = defaultBranding } = useQuery({
+    queryKey: ["settings", DB_KEY],
+    queryFn: async () => {
+      const { data } = await supabase.from("settings").select("value").eq("key", DB_KEY).single();
+      return data?.value ? { ...defaultBranding, ...data.value } : defaultBranding;
+    }
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (newBranding: Branding) => {
+      await supabase.from("settings").upsert({ key: DB_KEY, value: newBranding });
+      return newBranding;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings", DB_KEY] })
+  });
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      const next = raw ? { ...defaultBranding, ...JSON.parse(raw) } : defaultBranding;
-      setState(next);
-      applyBranding(next);
-    } catch {
-      applyBranding(defaultBranding);
-    }
-  }, []);
+    applyBranding(branding);
+  }, [branding]);
 
-  const setBranding = useCallback((patch: Partial<Branding>) => {
-    setState((prev) => {
-      const next = { ...prev, ...patch };
-      applyBranding(next);
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        /* storage unavailable */
-      }
-      return next;
-    });
-  }, []);
+  const setBranding = useCallback(
+    (patch: Partial<Branding>) => {
+      mutation.mutate({ ...branding, ...patch });
+    },
+    [branding, mutation]
+  );
 
   const reset = useCallback(() => {
-    setState(defaultBranding);
-    applyBranding(defaultBranding);
-    try {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      /* storage unavailable */
-    }
-  }, []);
+    mutation.mutate(defaultBranding);
+  }, [mutation]);
 
-  const value = useMemo(() => ({ branding, setBranding, reset }), [branding, setBranding, reset]);
-
-  return <BrandingContext.Provider value={value}>{children}</BrandingContext.Provider>;
+  return (
+    <BrandingContext.Provider value={{ branding, setBranding, reset }}>
+      {children}
+    </BrandingContext.Provider>
+  );
 }
 
 export function useBranding() {

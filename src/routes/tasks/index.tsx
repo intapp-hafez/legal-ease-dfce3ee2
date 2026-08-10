@@ -2,8 +2,8 @@ import { useState } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { PageShell, Panel } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
-import { tasks } from "@/lib/legal-data";
 import { useOptionList } from "@/lib/option-lists";
+import { useProfilesOptions } from "@/lib/useSupabase";
 
 const baseCategories = [
   "إعداد عقود",
@@ -38,7 +38,10 @@ export const Route = createFileRoute("/tasks/")({
 
 function TasksPage() {
   const [filter, setFilter] = useState("");
+  const [assigneeFilter, setAssigneeFilter] = useState("");
+  const [creatorFilter, setCreatorFilter] = useState("");
   const { options: categories, add: addCategory } = useOptionList("task-categories", baseCategories);
+  const profiles = useProfilesOptions();
   const router = useRouter();
 
   return (
@@ -48,29 +51,56 @@ function TasksPage() {
     >
       <div>
         <CrudTable
-          filters={{ category: filter }}
+          filters={{ category: filter, assignee_id: assigneeFilter, created_by: creatorFilter }}
           title="قائمة المهام"
           extraActions={
-            <select 
-              value={filter} 
-              onChange={(e) => setFilter(e.target.value)}
-              className="h-9 min-w-[180px] rounded-md border border-border bg-background px-3 text-sm outline-none"
-            >
-              <option value="">جميع التصنيفات</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+            <>
+              <select 
+                value={filter} 
+                onChange={(e) => setFilter(e.target.value)}
+                className="h-9 min-w-[150px] rounded-md border border-border bg-background px-3 text-sm outline-none"
+              >
+                <option value="">جميع التصنيفات</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              
+              <select 
+                value={assigneeFilter} 
+                onChange={(e) => setAssigneeFilter(e.target.value)}
+                className="h-9 min-w-[150px] rounded-md border border-border bg-background px-3 text-sm outline-none"
+              >
+                <option value="">جميع المسؤولين</option>
+                {profiles.map((p) => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+
+              <select 
+                value={creatorFilter} 
+                onChange={(e) => setCreatorFilter(e.target.value)}
+                className="h-9 min-w-[150px] rounded-md border border-border bg-background px-3 text-sm outline-none"
+              >
+                <option value="">جميع المنشئين</option>
+                {profiles.map((p) => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+            </>
           }
-          onRowClick={(row) => router.navigate({ to: `/tasks/${row.no}` })}
+          onRowClick={(row: any) => router.navigate({ to: `/tasks/${row.id}` })}
           addLabel="مهمة جديدة"
           storageKey="tasks"
-          seed={tasks}
-          idKey="no"
+          tableName="tasks"
+          seed={[]}
+          idKey="id"
+          sequenceKey="no"
           idPrefix="TSK-"
           fields={[
             { key: "no", label: "رقم المهمة", type: "mono", required: true },
             { key: "title", label: "العنوان", required: true },
+            { key: "description", label: "التفاصيل", type: "textarea", hideInForm: false },
             {
               key: "category",
               label: "التصنيف",
@@ -86,12 +116,19 @@ function TasksPage() {
               options: ["منخفضة", "متوسطة", "عالية", "عاجلة"],
             },
             {
-              key: "assignee",
+              key: "assignee_id",
               label: "المسؤول",
               type: "select",
-              options: ["أحمد محمد", "سارة أحمد", "خالد عبدالله"],
+              options: profiles,
             },
-            { key: "due", label: "الاستحقاق", type: "date" },
+            {
+              key: "created_by",
+              label: "المنشئ",
+              type: "select",
+              options: profiles,
+              hideInForm: true,
+            },
+            { key: "due_date", label: "الاستحقاق", type: "date" },
             { key: "progress", label: "الإنجاز", type: "progress" },
             {
               key: "status",

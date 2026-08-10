@@ -3,15 +3,10 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useState,
 } from "react";
 import { logAudit } from "@/lib/audit";
-
-/* ------------------------------------------------------------------ *
- * Frontend-only role prototype: users, roles and permissions live in
- * localStorage. This is NOT real authentication — no server, no tokens.
- * ------------------------------------------------------------------ */
+import { supabase } from "@/lib/supabase";
 
 export type RoleId = "super_admin" | "admin" | "employee";
 
@@ -74,7 +69,7 @@ export type User = {
   id: string;
   name: string;
   username: string;
-  password: string;
+  password?: string;
   role: RoleId;
   active: boolean;
 };
@@ -110,10 +105,10 @@ function writeJson(key: string, value: unknown) {
 type AuthCtx = {
   ready: boolean;
   user: User | null;
-  users: User[];
+  users: User[]; // All users (for admin panel if needed)
   matrix: RoleMatrix;
-  login: (username: string, password: string) => { ok: boolean; error?: string };
-  logout: () => void;
+  login: (username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  logout: () => Promise<void>;
   can: (module: ModuleId, action?: "view" | "edit") => boolean;
   saveUser: (user: User) => void;
   removeUser: (id: string) => void;
@@ -125,44 +120,106 @@ const Ctx = createContext<AuthCtx | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [users, setUsers] = useState<User[]>(seedUsers);
+  const [user, setUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const [matrix, setMatrix] = useState<RoleMatrix>(defaultMatrix);
-  const [userId, setUserId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const u = readJson<User[]>(USERS_KEY, seedUsers);
-    const m = readJson<RoleMatrix>(MATRIX_KEY, defaultMatrix);
-    setUsers(Array.isArray(u) && u.length ? u : seedUsers);
-    setMatrix({ ...defaultMatrix, ...m });
-    setUserId(readJson<string | null>(SESSION_KEY, null));
-    setReady(true);
+  const fetchUsers = useCallback(async () => {
+    const { data } = await supabase.from("profiles").select("*");
+    if (data) {
+      setUsers(
+        data.map((d: any) => ({
+          id: d.id,
+          name: d.full_name,
+          username: d.employee_code || "user",
+          role: (d.role as RoleId) || "employee",
+          active: true,
+        }))
+      );
+    }
   }, []);
 
-  const user = useMemo(
-    () => users.find((u) => u.id === userId && u.active) ?? null,
-    [users, userId],
-  );
+  const fetchMatrix = useCallback(async () => {
+    const { data } = await supabase.from("role_permissions").select("*");
+    if (data && data.length > 0) {
+      const newMatrix = JSON.parse(JSON.stringify(defaultMatrix)) as RoleMatrix;
+      // Reset everything to false first
+      (Object.keys(newMatrix) as RoleId[]).forEach((r) => {
+        (Object.keys(newMatrix[r]) as ModuleId[]).forEach((m) => {
+          newMatrix[r][m] = { view: false, edit: false };
+        });
+      });
+      // Populate from DB
+      data.forEach((row: any) => {
+        const [mod, action] = row.permission.split(":");
+        if (newMatrix[row.role as RoleId]?.[mod as ModuleId]) {
+          newMatrix[row.role as RoleId][mod as ModuleId][action as "view" | "edit"] = true;
+        }
+      });
+      setMatrix(newMatrix);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMatrix();
+
+    // Initialize Supabase Auth
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchProfile(session.user.id);
+        fetchUsers();
+      } else {
+        setReady(true);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchProfile(session.user.id);
+        fetchUsers();
+      } else {
+        setUser(null);
+        setReady(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function fetchProfile(userId: string) {
+    const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
+    if (data) {
+      setUser({
+        id: data.id,
+        name: data.full_name,
+        username: data.employee_code || "user",
+        role: (data.role as RoleId) || "employee",
+        active: true,
+      });
+    }
+    setReady(true);
+  }
 
   const login = useCallback(
-    (username: string, password: string) => {
-      const found = users.find(
-        (u) => u.username.trim().toLowerCase() === username.trim().toLowerCase(),
-      );
-      if (!found) return { ok: false, error: "اسم المستخدم غير موجود" };
-      if (!found.active) return { ok: false, error: "الحساب موقوف — تواصل مع مدير النظام" };
-      if (found.password !== password) return { ok: false, error: "كلمة المرور غير صحيحة" };
-      setUserId(found.id);
-      writeJson(SESSION_KEY, found.id);
-      logAudit({ action: "تسجيل دخول", target: found.username, user: found.name });
+    async (username: string, password: string) => {
+      const email = username.includes("@") ? username : `${username}@int.local`;
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) {
+        return { ok: false, error: "بيانات الدخول غير صحيحة" };
+      }
+      logAudit({ action: "تسجيل دخول", target: username, user_id: data.user?.id });
       return { ok: true };
     },
-    [users],
+    [],
   );
 
-  const logout = useCallback(() => {
-    if (user) logAudit({ action: "تسجيل خروج", target: user.username, user: user.name });
-    setUserId(null);
-    writeJson(SESSION_KEY, null);
+  const logout = useCallback(async () => {
+    if (user) logAudit({ action: "تسجيل خروج", target: user.username, user_id: user.id });
+    await supabase.auth.signOut();
+    setUser(null);
   }, [user]);
 
   const can = useCallback(
@@ -175,40 +232,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [user, matrix],
   );
 
-  const saveUser = useCallback((next: User) => {
-    setUsers((prev) => {
-      const exists = prev.some((u) => u.id === next.id);
-      const list = exists ? prev.map((u) => (u.id === next.id ? next : u)) : [...prev, next];
-      writeJson(USERS_KEY, list);
-      return list;
-    });
-    logAudit({ action: "تحديث مستخدم", target: next.username, details: next.role });
-  }, []);
+  const saveUser = useCallback(async (next: User) => {
+    // Only support updating existing profiles because creating auth users requires backend
+    const { error } = await supabase.from("profiles").update({
+      full_name: next.name,
+      employee_code: next.username,
+      role: next.role,
+    }).eq("id", next.id);
+    
+    if (!error) {
+      setUsers((prev) => prev.map((u) => (u.id === next.id ? next : u)));
+      logAudit({ action: "تحديث مستخدم", target: next.username, details: String(next.role), user_id: user?.id || undefined });
+    } else {
+      console.error("Failed to update profile", error);
+    }
+  }, [user]);
 
   const removeUser = useCallback((id: string) => {
-    setUsers((prev) => {
-      const list = prev.filter((u) => u.id !== id);
-      writeJson(USERS_KEY, list);
-      return list;
-    });
-    logAudit({ action: "حذف مستخدم", target: id });
+    // Only backend can remove Auth users. We can't do this from the frontend safely.
+    alert("لا يمكن حذف المستخدمين من الواجهة لمتطلبات الأمان.");
   }, []);
 
-  const setPerm = useCallback((role: RoleId, module: ModuleId, perm: Perm) => {
+  const setPerm = useCallback(async (role: RoleId, module: ModuleId, perm: Perm) => {
     setMatrix((prev) => {
-      const next: RoleMatrix = {
-        ...prev,
-        [role]: { ...prev[role], [module]: perm },
-      };
-      writeJson(MATRIX_KEY, next);
+      const next: RoleMatrix = { ...prev, [role]: { ...prev[role], [module]: perm } };
       return next;
     });
+
+    // Delete existing perms for this role/module
+    await supabase.from("role_permissions")
+      .delete()
+      .eq("role", role)
+      .like("permission", `${module}:%`);
+
+    // Insert new perms
+    const inserts = [];
+    if (perm.view) inserts.push({ role, permission: `${module}:view` });
+    if (perm.edit) inserts.push({ role, permission: `${module}:edit` });
+    
+    if (inserts.length > 0) {
+      await supabase.from("role_permissions").insert(inserts);
+    }
+
     logAudit({
       action: "تعديل صلاحيات",
       target: `${role} — ${module}`,
       details: `عرض: ${perm.view ? "نعم" : "لا"} • تعديل: ${perm.edit ? "نعم" : "لا"}`,
+      user_id: user?.id || undefined
     });
-  }, []);
+  }, [user]);
 
   const resetAccess = useCallback(() => {
     setUsers(seedUsers);

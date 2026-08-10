@@ -5,14 +5,16 @@ import { Panel, StatusPill } from "@/components/legal/PageShell";
 import { ImportWizard, type ImportResult } from "@/components/legal/ImportWizard";
 import { SearchSelect } from "@/components/legal/SearchSelect";
 import { useCollection, nextId, type Row } from "@/lib/crud";
+import { useSupabaseCollection } from "@/lib/useSupabase";
 import { downloadTemplate } from "@/lib/excel";
-import { logAudit, CURRENT_USER } from "@/lib/audit";
+import { logAudit } from "@/lib/audit";
+import { useAuth } from "@/lib/auth";
 
 export type Field = {
   key: string;
   label: string;
   type?: "text" | "number" | "date" | "select" | "status" | "progress" | "mono" | "textarea" | "file";
-  options?: string[];
+  options?: (string | { value: string; label: string })[];
   required?: boolean;
   hideInForm?: boolean;
   /** If provided, renders a searchable select with a + button to add new options. */
@@ -26,12 +28,15 @@ type Props<T extends Row> = {
   storageKey: string;
   seed: T[];
   idKey: string;
+  sequenceKey?: string;
   idPrefix: string;
   fields: Field[];
   className?: string;
   addLabel?: string;
   subtitle?: string;
   extraActions?: ReactNode;
+  /** Pass this prop to connect directly to a Supabase table instead of local storage! */
+  tableName?: string;
   /** Optional external filters, e.g. { category: "رخصة استيراد" }. Empty values are ignored. */
   filters?: Record<string, string>;
   onRowClick?: (row: T) => void;
@@ -48,6 +53,7 @@ export function CrudTable<T extends Row>({
   storageKey,
   seed,
   idKey,
+  sequenceKey,
   idPrefix,
   fields,
   className = "",
@@ -55,14 +61,16 @@ export function CrudTable<T extends Row>({
   subtitle,
   filters,
   extraActions,
+  tableName,
   onRowClick,
 }: Props<T>) {
+  const { user } = useAuth();
 
-  const { items, create, update, remove, reset, replaceAll } = useCollection<T>(
-    storageKey,
-    seed,
-    idKey,
-  );
+  const localDb = useCollection<T>(storageKey, seed, idKey);
+  const supabaseDb = useSupabaseCollection<T>(tableName || "", idKey as keyof T);
+  const db = tableName ? supabaseDb : localDb;
+  
+  const { items, create, update, remove, reset, replaceAll, hydrated } = db;
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -81,7 +89,7 @@ export function CrudTable<T extends Row>({
     });
     setImportMsg({
       ok: r.failed === 0,
-      text: `تم الاستيراد بواسطة ${CURRENT_USER} — ${summary} (سُجّلت العملية في سجل التدقيق).`,
+      text: `تم الاستيراد بواسطة ${user?.name || "المستخدم"} — ${summary} (سُجّلت العملية في سجل التدقيق).`,
     });
   }
 
@@ -102,7 +110,8 @@ export function CrudTable<T extends Row>({
 
   function openCreate() {
     setEditingId(null);
-    setDraft({ ...emptyRow(fields), [idKey]: nextId(items, idKey, idPrefix) });
+    const seq = sequenceKey || idKey;
+    setDraft({ ...emptyRow(fields), [seq]: nextId(items, seq, idPrefix) });
     setError(null);
     setOpen(true);
   }
@@ -128,6 +137,10 @@ export function CrudTable<T extends Row>({
         setError("المعرّف مستخدم بالفعل");
         return;
       }
+      // For UUIDs, we don't want to send an empty id to Supabase
+      if (tableName && idKey === "id") {
+        delete (value as any).id;
+      }
       create(value);
     }
     setOpen(false);
@@ -138,6 +151,12 @@ export function CrudTable<T extends Row>({
     if (f.type === "status") return <StatusPill value={String(v)} />;
     if (f.type === "mono")
       return <span className="font-mono text-xs text-muted-foreground">{String(v)}</span>;
+    if (f.type === "select" && Array.isArray(f.options)) {
+      const option = f.options.find((o) => typeof o === "object" && o.value === String(v));
+      if (option && typeof option === "object") {
+        return <span>{option.label}</span>;
+      }
+    }
     if (f.type === "progress")
       return (
         <div className="flex w-28 items-center gap-2">
@@ -162,7 +181,7 @@ export function CrudTable<T extends Row>({
         <div className="flex flex-wrap items-center gap-2">
           {extraActions}
           <button
-            onClick={() => downloadTemplate(`قالب-${title}`, fields, items[0])}
+            onClick={() => downloadTemplate(`قالب-${title}`, fields as any, items[0])}
             title="تحميل قالب Excel جاهز"
             className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary"
           >
@@ -199,7 +218,7 @@ export function CrudTable<T extends Row>({
         open={wizardOpen}
         onClose={() => setWizardOpen(false)}
         title={title}
-        fields={fields}
+        fields={fields as any}
         items={items}
         idKey={idKey}
         idPrefix={idPrefix}
@@ -229,8 +248,12 @@ export function CrudTable<T extends Row>({
         />
       </div>
 
+      {!hydrated && (
+        <div className="py-8 text-center text-sm text-muted-foreground">جاري تحميل البيانات...</div>
+      )}
 
-      <div className="overflow-x-auto">
+      {hydrated && (
+        <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-collapse text-right text-sm">
           <thead>
             <tr className="border-b border-border">
@@ -296,6 +319,7 @@ export function CrudTable<T extends Row>({
           </tbody>
         </table>
       </div>
+      )}
 
       {open ? (
         <div
@@ -335,7 +359,7 @@ export function CrudTable<T extends Row>({
                           label={""}
                           value={String(draft[f.key] ?? "")}
                           onChange={(v) => setDraft({ ...draft, [f.key]: v })}
-                          options={f.options ?? []}
+                          options={(f.options ?? []).map(o => typeof o === "string" ? o : o.label)}
                           allLabel="—"
                           onAddOption={f.onAddOption}
                           addLabel={f.addLabel ?? "إضافة خيار جديد"}
@@ -347,11 +371,15 @@ export function CrudTable<T extends Row>({
                           className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
                         >
                           <option value="">—</option>
-                          {(f.options ?? []).map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
+                          {(f.options ?? []).map((o) => {
+                            const val = typeof o === "string" ? o : o.value;
+                            const lbl = typeof o === "string" ? o : o.label;
+                            return (
+                              <option key={val} value={val}>
+                                {lbl}
+                              </option>
+                            );
+                          })}
                         </select>
                       )
                     ) : f.type === "textarea" ? (

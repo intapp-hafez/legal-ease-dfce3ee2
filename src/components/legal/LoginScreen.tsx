@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { LogIn, ShieldCheck } from "lucide-react";
-import { useAuth, ROLES } from "@/lib/auth";
+import { LogIn } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 import { useBranding } from "@/lib/branding";
 
 export function LoginScreen() {
@@ -10,9 +10,9 @@ export function LoginScreen() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const res = login(username, password);
+    const res = await login(username, password);
     if (!res.ok) setError(res.error ?? "تعذّر تسجيل الدخول");
     else setError(null);
   }
@@ -71,25 +71,7 @@ export function LoginScreen() {
           </button>
         </form>
 
-        <div className="mt-6 rounded-xl border border-border bg-secondary/60 p-4">
-          <p className="flex items-center gap-2 text-xs font-semibold text-foreground">
-            <ShieldCheck className="size-4 text-[var(--primary-ink)]" />
-            حسابات تجريبية (كلمة المرور: 1234)
-          </p>
-          <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
-            {ROLES.map((r, i) => (
-              <li key={r.id} className="flex items-center justify-between gap-3">
-                <span className="font-mono text-foreground">
-                  {["superadmin", "admin", "employee"][i]}
-                </span>
-                <span>{r.label}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-            نموذج أولي بدون خادم: الحسابات والصلاحيات محفوظة محليًا في المتصفح وليست حماية فعلية.
-          </p>
-        </div>
+
       </div>
     </div>
   );

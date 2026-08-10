@@ -2,8 +2,8 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
-import { requests } from "@/lib/legal-data";
 import { useOptionList } from "@/lib/option-lists";
+import { useProfilesOptions } from "@/lib/useSupabase";
 
 const baseTypes = [
   "نسخة من العقد",
@@ -36,6 +36,7 @@ export const Route = createFileRoute("/requests")({
 function RequestsPage() {
   const [filter, setFilter] = useState("");
   const { options: types, add: addType } = useOptionList("request-types", baseTypes);
+  const profilesOptions = useProfilesOptions();
 
   return (
     <PageShell
@@ -66,12 +67,13 @@ function RequestsPage() {
           title="الطلبات الواردة"
           addLabel="طلب جديد"
           storageKey="requests"
-          seed={requests}
+          tableName="requests"
+          seed={[]}
           idKey="no"
           idPrefix="RQ-"
           fields={[
             { key: "no", label: "رقم الطلب", type: "mono", required: true },
-            { key: "employee", label: "الموظف", required: true },
+            { key: "employee_id", label: "الموظف", type: "select", options: profilesOptions, required: true },
             {
               key: "type",
               label: "نوع الطلب",
@@ -80,7 +82,7 @@ function RequestsPage() {
               onAddOption: addType,
               addLabel: "إضافة نوع جديد",
             },
-            { key: "date", label: "التاريخ", type: "date" },
+            { key: "request_date", label: "التاريخ", type: "date" },
             { key: "stage", label: "المرحلة الحالية", type: "select", options: workflow },
             {
               key: "status",

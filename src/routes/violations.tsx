@@ -2,8 +2,8 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
-import { violations } from "@/lib/legal-data";
 import { useOptionList } from "@/lib/option-lists";
+import { useProfilesOptions } from "@/lib/useSupabase";
 
 const baseTypes = [
   "تنبيه شفهي",
@@ -33,6 +33,7 @@ export const Route = createFileRoute("/violations")({
 function ViolationsPage() {
   const [filter, setFilter] = useState("");
   const { options: types, add: addType } = useOptionList("violation-types", baseTypes);
+  const profilesOptions = useProfilesOptions();
 
   return (
     <PageShell
@@ -50,13 +51,13 @@ function ViolationsPage() {
           title="السجل التأديبي"
           addLabel="تسجيل مخالفة"
           storageKey="violations"
-          seed={violations}
+          tableName="violations"
+          seed={[]}
           idKey="no"
           idPrefix="VL-"
           fields={[
             { key: "no", label: "الرقم", type: "mono", required: true },
-            { key: "employee", label: "الموظف", required: true },
-            { key: "dept", label: "القسم" },
+            { key: "employee_id", label: "الموظف", type: "select", options: profilesOptions, required: true },
             {
               key: "type",
               label: "نوع المخالفة",
@@ -65,7 +66,7 @@ function ViolationsPage() {
               onAddOption: addType,
               addLabel: "إضافة نوع جديد",
             },
-            { key: "date", label: "التاريخ", type: "date" },
+            { key: "violation_date", label: "التاريخ", type: "date" },
             { key: "decision", label: "القرار" },
             {
               key: "status",

@@ -63,20 +63,6 @@ function SettingsPage() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <CrudTable
-          title="أدوار المستخدمين والصلاحيات"
-          addLabel="دور جديد"
-          storageKey="roles"
-          seed={roles}
-          idKey="role"
-          idPrefix="دور "
-          fields={[
-            { key: "role", label: "الدور", required: true },
-            { key: "perms", label: "الصلاحيات", required: true },
-          ]}
-        />
-
-
         <div className="space-y-5">
           <Panel title="جدول التذكيرات قبل الانتهاء">
             <div className="flex flex-wrap gap-2">

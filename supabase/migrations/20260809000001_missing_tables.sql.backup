@@ -1,0 +1,221 @@
+-- Additional Schema for INT Legal Management System
+-- Missing Tables: Cases, Violations, Requests, Repository, Audit Logs, Settings, Permissions, Custody Logs, Company Policies, Task Activities
+
+-- 6. Cases (القضايا القانونية)
+CREATE TABLE public.cases (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  no TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  type TEXT,
+  opponent TEXT,
+  court TEXT,
+  firm TEXT,
+  lawyer_id UUID REFERENCES public.profiles(id),
+  start_date DATE,
+  hearing_date DATE,
+  value NUMERIC(12,2),
+  status TEXT DEFAULT 'مفتوحة',
+  priority TEXT DEFAULT 'متوسطة',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. Violations (مخالفات الموظفين)
+CREATE TABLE public.violations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  no TEXT UNIQUE NOT NULL,
+  employee_id UUID REFERENCES public.profiles(id),
+  type TEXT,
+  violation_date DATE,
+  decision TEXT,
+  status TEXT DEFAULT 'مفتوحة',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 8. Requests (الطلبات القانونية)
+CREATE TABLE public.requests (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  no TEXT UNIQUE NOT NULL,
+  employee_id UUID REFERENCES public.profiles(id),
+  type TEXT,
+  request_date DATE,
+  stage TEXT,
+  status TEXT DEFAULT 'جديد',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 9. Repository / Archive (مستودع المستندات)
+CREATE TABLE public.repository (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL, -- 'folder' or 'file'
+  parent_id UUID REFERENCES public.repository(id) ON DELETE CASCADE,
+  size TEXT,
+  department TEXT,
+  category TEXT,
+  file_type TEXT,
+  owner_id UUID REFERENCES public.profiles(id),
+  version TEXT,
+  status TEXT DEFAULT 'Active',
+  confidentiality TEXT DEFAULT 'Normal',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 10. Audit Logs (سجل النشاطات)
+CREATE TABLE public.audit_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  action_time TIMESTAMPTZ DEFAULT NOW(),
+  user_id UUID REFERENCES public.profiles(id),
+  action TEXT NOT NULL,
+  target TEXT,
+  ip_address TEXT
+);
+
+-- 11. Settings (إعدادات النظام)
+CREATE TABLE public.settings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  key TEXT UNIQUE NOT NULL,
+  value JSONB,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 12. Role Permissions (صلاحيات المستخدمين)
+CREATE TABLE public.role_permissions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  role TEXT NOT NULL,
+  permission TEXT NOT NULL,
+  UNIQUE(role, permission)
+);
+
+-- 13. Custody Logs (سجل العهد)
+CREATE TABLE public.custody_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  asset_id UUID REFERENCES public.assets(id),
+  employee_id UUID REFERENCES public.profiles(id),
+  action TEXT NOT NULL, -- 'Assigned', 'Returned', 'Lost', 'Damaged'
+  action_date TIMESTAMPTZ DEFAULT NOW(),
+  notes TEXT
+);
+
+-- 14. Company Policies (السياسات واللوائح)
+CREATE TABLE public.company_policies (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  title TEXT NOT NULL,
+  content TEXT,
+  version TEXT,
+  effective_date DATE,
+  department TEXT,
+  status TEXT DEFAULT 'Active',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 15. Task Activities (ملاحظات ونشاطات المهام)
+CREATE TABLE public.task_activities (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  task_id UUID REFERENCES public.tasks(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES public.profiles(id),
+  content TEXT NOT NULL,
+  activity_type TEXT DEFAULT 'ملاحظة', -- 'ملاحظة', 'تغيير حالة', 'تحديث'
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Apply triggers for updated_at
+CREATE TRIGGER update_cases_modtime BEFORE UPDATE ON public.cases FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_violations_modtime BEFORE UPDATE ON public.violations FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_requests_modtime BEFORE UPDATE ON public.requests FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_repository_modtime BEFORE UPDATE ON public.repository FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_settings_modtime BEFORE UPDATE ON public.settings FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_company_policies_modtime BEFORE UPDATE ON public.company_policies FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_task_activities_modtime BEFORE UPDATE ON public.task_activities FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE public.cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.violations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.repository ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.custody_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.company_policies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_activities ENABLE ROW LEVEL SECURITY;
+
+-- -------------------------------------------------------------
+-- RLS POLICIES FOR NEW TABLES
+-- -------------------------------------------------------------
+
+-- Cases: Only Legal Consultants and Admins can see/edit
+CREATE POLICY "Cases viewable by Legal and Admins" ON public.cases FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('مدير النظام', 'المستشار القانوني'))
+);
+CREATE POLICY "Cases modifiable by Legal and Admins" ON public.cases FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('مدير النظام', 'المستشار القانوني'))
+);
+
+-- Violations: HR and Admins can see all. Employee can see their own.
+CREATE POLICY "Violations viewable by owner or HR/Admins" ON public.violations FOR SELECT USING (
+  auth.uid() = employee_id OR 
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('مدير النظام', 'المستشار القانوني', 'الموارد البشرية'))
+);
+
+-- Requests: Admins/HR see all, Employee sees their own.
+CREATE POLICY "Requests viewable by owner or HR/Admins" ON public.requests FOR SELECT USING (
+  auth.uid() = employee_id OR 
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('مدير النظام', 'المستشار القانوني', 'الموارد البشرية'))
+);
+CREATE POLICY "Requests can be created by employees" ON public.requests FOR INSERT WITH CHECK (
+  auth.uid() = employee_id
+);
+
+-- Repository: Based on Confidentiality and Role (Simplified for now: Admins/Legal see all, owner sees own)
+CREATE POLICY "Repository viewable by owner or Admins/Legal" ON public.repository FOR SELECT USING (
+  auth.uid() = owner_id OR 
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('مدير النظام', 'المستشار القانوني', 'الموارد البشرية'))
+);
+
+-- Audit Logs: Only Admins can see
+CREATE POLICY "Audit logs viewable by Admins only" ON public.audit_logs FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = 'مدير النظام')
+);
+CREATE POLICY "System can insert audit logs" ON public.audit_logs FOR INSERT WITH CHECK (true);
+
+-- Settings: Viewable by all, modifiable by Admins
+CREATE POLICY "Settings viewable by everyone" ON public.settings FOR SELECT USING (true);
+CREATE POLICY "Settings modifiable by Admins" ON public.settings FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = 'مدير النظام')
+);
+
+-- Role Permissions: Viewable by all, modifiable by Admins
+CREATE POLICY "Role permissions viewable by everyone" ON public.role_permissions FOR SELECT USING (true);
+CREATE POLICY "Role permissions modifiable by Admins" ON public.role_permissions FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = 'مدير النظام')
+);
+
+-- Custody Logs: Viewable by owner or Admins
+CREATE POLICY "Custody logs viewable by assignee or admins" ON public.custody_logs FOR SELECT USING (
+  auth.uid() = employee_id OR 
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('مدير النظام', 'الموارد البشرية'))
+);
+
+-- Company Policies: Viewable by everyone, modifiable by Admins/HR/Legal
+CREATE POLICY "Policies viewable by everyone" ON public.company_policies FOR SELECT USING (true);
+CREATE POLICY "Policies modifiable by Admins and HR" ON public.company_policies FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('مدير النظام', 'المستشار القانوني', 'الموارد البشرية'))
+);
+
+-- Task Activities: Viewable by assignee or Admins
+CREATE POLICY "Task activities viewable by task assignee or admins" ON public.task_activities FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM public.tasks 
+    WHERE tasks.id = task_activities.task_id 
+    AND (tasks.assignee_id = auth.uid() OR EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('مدير النظام', 'المستشار القانوني')))
+  )
+);
+CREATE POLICY "Users can add activities to their tasks" ON public.task_activities FOR INSERT WITH CHECK (
+  auth.uid() = user_id
+);

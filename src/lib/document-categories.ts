@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export const baseDocumentCategories = [
   "السجل التجاري",
@@ -21,10 +23,6 @@ export const baseDocumentCategories = [
 
 export const DOCUMENT_CATEGORY_KEY = "document-categories";
 
-const LEGACY = {
-  [DOCUMENT_CATEGORY_KEY]: "document-extra-categories",
-};
-
 export function normalizeDocumentCategory(s: string) {
   return s
     .replace(/[\u064B-\u0652\u0670]/g, "")
@@ -34,29 +32,6 @@ export function normalizeDocumentCategory(s: string) {
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
-}
-
-const EVENT = "document-categories-changed";
-
-function read(base: string[]): string[] {
-  try {
-    const raw = localStorage.getItem(DOCUMENT_CATEGORY_KEY);
-    if (raw) return JSON.parse(raw) as string[];
-    const legacy = localStorage.getItem(LEGACY[DOCUMENT_CATEGORY_KEY]);
-    if (legacy) return [...base, ...(JSON.parse(legacy) as string[])];
-  } catch {
-    /* ignore */
-  }
-  return base;
-}
-
-function write(list: string[]) {
-  try {
-    localStorage.setItem(DOCUMENT_CATEGORY_KEY, JSON.stringify(list));
-  } catch {
-    /* ignore */
-  }
-  window.dispatchEvent(new CustomEvent(EVENT, { detail: DOCUMENT_CATEGORY_KEY }));
 }
 
 export type DocumentCategoriesApi = {
@@ -69,52 +44,54 @@ export type DocumentCategoriesApi = {
 };
 
 export function useDocumentCategories(): DocumentCategoriesApi {
-  const [options, setOptions] = useState<string[]>(baseDocumentCategories);
+  const queryClient = useQueryClient();
+  const dbKey = `option-list:${DOCUMENT_CATEGORY_KEY}`;
 
-  useEffect(() => {
-    const sync = () => setOptions(read(baseDocumentCategories));
-    sync();
-    const onEvt = (e: Event) => {
-      if ((e as CustomEvent).detail === DOCUMENT_CATEGORY_KEY) sync();
-    };
-    window.addEventListener(EVENT, onEvt);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener(EVENT, onEvt);
-      window.removeEventListener("storage", sync);
-    };
-  }, []);
+  const { data: options = baseDocumentCategories } = useQuery({
+    queryKey: ["settings", dbKey],
+    queryFn: async () => {
+      const { data } = await supabase.from("settings").select("value").eq("key", dbKey).single();
+      if (data?.value && Array.isArray(data.value)) return data.value as string[];
+      return baseDocumentCategories;
+    }
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (newList: string[]) => {
+      await supabase.from("settings").upsert({ key: dbKey, value: newList });
+      return newList;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings", dbKey] })
+  });
 
   const add = useCallback((value: string) => {
     const v = value.trim();
     if (!v) return "الرجاء إدخال اسم صالح.";
-    const current = read(baseDocumentCategories);
-    if (current.some((o) => normalizeDocumentCategory(o) === normalizeDocumentCategory(v))) {
+    if (options.some((o) => normalizeDocumentCategory(o) === normalizeDocumentCategory(v))) {
       return `الاسم «${v}» موجود مسبقًا، لا يمكن التكرار.`;
     }
-    write([...current, v]);
+    mutation.mutate([...options, v]);
     return null;
-  }, []);
+  }, [options, mutation]);
 
   const rename = useCallback((oldValue: string, next: string) => {
     const v = next.trim();
     if (!v) return "الرجاء إدخال اسم صالح.";
-    const current = read(baseDocumentCategories);
     if (
-      current.some(
+      options.some(
         (o) => o !== oldValue && normalizeDocumentCategory(o) === normalizeDocumentCategory(v),
       )
     )
       return `الاسم «${v}» موجود مسبقًا، لا يمكن التكرار.`;
-    write(current.map((o) => (o === oldValue ? v : o)));
+    mutation.mutate(options.map((o) => (o === oldValue ? v : o)));
     return null;
-  }, []);
+  }, [options, mutation]);
 
   const remove = useCallback((value: string) => {
-    write(read(baseDocumentCategories).filter((o) => o !== value));
-  }, []);
+    mutation.mutate(options.filter((o) => o !== value));
+  }, [options, mutation]);
 
-  const reset = useCallback(() => write(baseDocumentCategories), []);
+  const reset = useCallback(() => mutation.mutate(baseDocumentCategories), [mutation]);
 
   return { options, add, rename, remove, reset };
 }

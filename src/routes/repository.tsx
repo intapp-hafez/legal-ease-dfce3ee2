@@ -1,9 +1,11 @@
 import { useState, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArchiveLayout } from "@/components/legal/ArchiveLayout";
-import { archiveData, type ArchiveNode } from "@/lib/legal-data";
+import { type ArchiveNode } from "@/lib/legal-data";
 import { CreateFolderModal, DocumentUploadModal, ArchiveSettingsModal } from "@/components/legal/ArchiveModals";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Folder,
   FileText,
@@ -27,7 +29,48 @@ export const Route = createFileRoute("/repository")({
 function RepositoryPage() {
   const { can, user } = useAuth();
   const canEdit = can("repository", "edit");
-  const [data, setData] = useState<ArchiveNode[]>(archiveData);
+  const queryClient = useQueryClient();
+
+  const { data: repositoryRows = [], isLoading } = useQuery({
+    queryKey: ["repository"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("repository").select(`*, profiles(full_name)`).order("created_at", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  const data = useMemo(() => {
+    // Build tree from flat rows
+    const map = new Map<string, any>();
+    const roots: any[] = [];
+    
+    repositoryRows.forEach(row => {
+      map.set(row.id, {
+        id: row.id,
+        name: row.name,
+        type: row.type,
+        updatedAt: new Date(row.created_at).toISOString().split("T")[0],
+        size: row.size,
+        fileType: row.file_type,
+        department: row.department,
+        owner: row.profiles?.full_name,
+        status: row.status,
+        children: [],
+        parent_id: row.parent_id
+      });
+    });
+
+    repositoryRows.forEach(row => {
+      if (row.parent_id && map.has(row.parent_id)) {
+        map.get(row.parent_id).children.push(map.get(row.id));
+      } else {
+        roots.push(map.get(row.id));
+      }
+    });
+
+    return roots;
+  }, [repositoryRows]);
   const [activeView, setActiveView] = useState("departments");
   
   // Breadcrumbs state - array of folder IDs
@@ -145,79 +188,62 @@ function RepositoryPage() {
     return crumbs;
   }, [path, data]);
 
+  const createNode = useMutation({
+    mutationFn: async (node: any) => {
+      const { data, error } = await supabase.from("repository").insert(node).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["repository"] }),
+  });
+
+  const deleteNode = useMutation({
+    mutationFn: async (id: string) => {
+      // Deleting a folder in a relational DB might need to cascade or we just delete by ID and assume cascading is on
+      const { error } = await supabase.from("repository").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["repository"] }),
+  });
+
   // CRUD Operations
-  const handleCreateFolder = (name: string) => {
-    const newFolder: ArchiveNode = {
-      id: Math.random().toString(),
+  const handleCreateFolder = async (name: string) => {
+    const parent_id = path.length > 0 ? path[path.length - 1] : null;
+    await createNode.mutateAsync({
       name,
       type: "folder",
-      updatedAt: new Date().toISOString().split("T")[0] ?? "",
-      children: [],
-    };
-    
-    if (path.length === 0) {
-      setData([...data, newFolder]);
-    } else {
-      const newData = JSON.parse(JSON.stringify(data));
-      let current = newData;
-      for (let i = 0; i < path.length; i++) {
-        const idx = current.findIndex((n: any) => n.id === path[i]);
-        if (i === path.length - 1) {
-           current[idx].children = [...(current[idx].children || []), newFolder];
-        } else {
-           current = current[idx].children!;
-        }
-      }
-      setData(newData);
-    }
+      parent_id
+    });
     setFolderModalOpen(false);
   };
 
-  const handleUploadFiles = (formData: any) => {
+  const handleUploadFiles = async (formData: any) => {
     const { files, department, category, fileType, employee, issueDate, expiryDate } = formData;
-    const newFiles: ArchiveNode[] = files.map((f: File) => ({
-       id: Math.random().toString(),
+    const parent_id = path.length > 0 ? path[path.length - 1] : null;
+
+    const inserts = files.map((f: File) => ({
        name: f.name,
        type: "file",
        size: (f.size / 1024 / 1024).toFixed(2) + " MB",
-       updatedAt: new Date().toISOString().split("T")[0],
        department,
        category,
-       fileType: fileType || "مستند",
-       owner: employee,
+       file_type: fileType || "مستند",
+       owner_id: employee || null, // Assuming employee comes back as an ID if they selected it, if not might fail constraint
        status: "Active",
-       confidentiality: category === "سري للغاية" ? "Highly Confidential" : "Normal"
+       confidentiality: category === "سري للغاية" ? "Highly Confidential" : "Normal",
+       parent_id
     }));
 
-    if (path.length === 0) {
-      setData([...data, ...newFiles]);
-    } else {
-      const newData = JSON.parse(JSON.stringify(data));
-      let current = newData;
-      for (let i = 0; i < path.length; i++) {
-        const idx = current.findIndex((n: any) => n.id === path[i]);
-        if (i === path.length - 1) {
-           current[idx].children = [...(current[idx].children || []), ...newFiles];
-        } else {
-           current = current[idx].children!;
-        }
-      }
-      setData(newData);
+    for (const item of inserts) {
+       await createNode.mutateAsync(item);
     }
     setUploadModalOpen(false);
   };
 
-  const handleDelete = (e: React.MouseEvent, id: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!confirm("هل أنت متأكد من الحذف؟")) return;
-    
-    const deleteRecursive = (nodes: ArchiveNode[]): ArchiveNode[] => {
-      return nodes.filter(n => n.id !== id).map(n => {
-        const { children, ...rest } = n;
-        return children ? { ...rest, children: deleteRecursive(children) } : rest;
-      });
-    }
-    setData(deleteRecursive(data));
+    if (!confirm("هل أنت متأكد من الحذف؟ سيتم حذف جميع الملفات الداخلية أيضاً.")) return;
+    await deleteNode.mutateAsync(id);
   };
 
   return (
@@ -316,7 +342,11 @@ function RepositoryPage() {
 
         {/* Content Grid */}
         <div className="flex-1 overflow-y-auto p-6">
-          {items.length === 0 ? (
+          {isLoading ? (
+            <div className="flex h-64 flex-col items-center justify-center text-muted-foreground">
+              <p>جاري تحميل المستودع...</p>
+            </div>
+          ) : items.length === 0 ? (
             <div className="flex h-64 flex-col items-center justify-center text-muted-foreground">
               {activeView === "trash" ? (
                 <Trash2 className="mb-4 size-12 opacity-20" />

@@ -2,8 +2,9 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell, Panel, TagList } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
-import { contracts, contractWorkflow } from "@/lib/legal-data";
+import { contractWorkflow } from "@/lib/legal-data";
 import { useOptionList } from "@/lib/option-lists";
+import { useProfilesOptions } from "@/lib/useSupabase";
 
 const baseTypes = [
   "عقد عمل",
@@ -33,13 +34,12 @@ export const Route = createFileRoute("/contracts")({
 });
 
 function ContractsPage() {
-  const [filter, setFilter] = useState("");
-  const { options: types, add: addType } = useOptionList("contract-types", baseTypes);
+  const profilesOptions = useProfilesOptions();
 
   return (
     <PageShell
       title="عقود الموظفين"
-      description="كل موظف يمكن أن يمتلك عدة عقود — مع إضافة وتعديل وحذف كامل للسجلات."
+      description="كل موظف يمكن أن يمتلك عدة عقود توظيف — مع إضافة وتعديل وحذف كامل للسجلات."
     >
       <Panel title="دورة حياة العقد">
         <ol className="flex flex-wrap items-center gap-2">
@@ -56,37 +56,24 @@ function ContractsPage() {
         </ol>
       </Panel>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-4">
-        <Panel title="أنواع العقود" className="lg:col-span-1">
-          <TagList items={types} selected={filter} onSelect={setFilter} />
-        </Panel>
-
+      <div className="mt-5 grid gap-5 lg:grid-cols-1">
         <CrudTable
-          filters={{ type: filter }}
-          className="lg:col-span-3"
+          filters={{ type: "توظيف" }}
+          className="lg:col-span-1"
           title="سجل العقود"
-          addLabel="عقد جديد"
+          addLabel="عقد توظيف جديد"
           storageKey="contracts"
-          seed={contracts}
+          tableName="contracts"
+          seed={[{ type: "توظيف" }]}
           idKey="no"
           idPrefix="CT-"
           fields={[
             { key: "no", label: "رقم العقد", type: "mono", required: true },
-            { key: "employee", label: "الموظف", required: true },
-            { key: "code", label: "الكود" },
-            { key: "dept", label: "القسم" },
-            { key: "position", label: "المسمى" },
-            {
-              key: "type",
-              label: "النوع",
-              type: "select",
-              options: types,
-              onAddOption: addType,
-              addLabel: "إضافة نوع جديد",
-            },
-            { key: "start", label: "البداية", type: "date" },
-            { key: "end", label: "النهاية", type: "date" },
-            { key: "salary", label: "الراتب" },
+            { key: "employee_id", label: "الموظف", type: "select", options: profilesOptions, required: true },
+            { key: "type", label: "النوع", type: "select", options: ["توظيف"], hideInForm: true },
+            { key: "start_date", label: "البداية", type: "date" },
+            { key: "end_date", label: "النهاية", type: "date" },
+            { key: "salary", label: "الراتب", type: "number" },
             { key: "status", label: "الحالة", type: "status", options: contractWorkflow },
           ]}
         />

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Bell, LogOut, Menu, X } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
 import { GlobalSearch } from "./GlobalSearch";
+import { NotificationPopover } from "./NotificationPopover";
 import { useAuth, roleLabel } from "@/lib/auth";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -41,12 +42,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
           <GlobalSearch />
 
-          <button className="relative rounded-md border border-border p-2 text-foreground" aria-label="الإشعارات">
-            <Bell className="size-4" />
-            <span className="absolute -top-1 -left-1 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
-              4
-            </span>
-          </button>
+          <NotificationPopover />
 
           <div className="hidden items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 sm:flex">
             <span className="flex size-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">

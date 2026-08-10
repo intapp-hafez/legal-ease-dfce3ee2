@@ -20,6 +20,7 @@ import { Route as RequestsRouteImport } from './routes/requests'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as ViolationsRouteImport } from './routes/violations'
+import { Route as ContractsContractIdRouteImport } from './routes/contracts/$contractId'
 import { Route as EmployeeCustodyRouteImport } from './routes/employee/custody'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks/$taskId'
@@ -81,6 +82,11 @@ const ViolationsRoute = ViolationsRouteImport.update({
   path: '/violations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContractsContractIdRoute = ContractsContractIdRouteImport.update({
+  id: '/$contractId',
+  path: '/$contractId',
+  getParentRoute: () => ContractsRoute,
+} as any)
 const EmployeeCustodyRoute = EmployeeCustodyRouteImport.update({
   id: '/employee/custody',
   path: '/employee/custody',
@@ -110,7 +116,7 @@ const EmployeeTasksTaskIdRoute = EmployeeTasksTaskIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cases': typeof CasesRoute
-  '/contracts': typeof ContractsRoute
+  '/contracts': typeof ContractsRouteWithChildren
   '/custody': typeof CustodyRoute
   '/documents': typeof DocumentsRoute
   '/reports': typeof ReportsRoute
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRouteWithChildren
   '/violations': typeof ViolationsRoute
+  '/contracts/$contractId': typeof ContractsContractIdRoute
   '/employee/custody': typeof EmployeeCustodyRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/tasks/': typeof TasksIndexRoute
@@ -128,7 +135,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cases': typeof CasesRoute
-  '/contracts': typeof ContractsRoute
+  '/contracts': typeof ContractsRouteWithChildren
   '/custody': typeof CustodyRoute
   '/documents': typeof DocumentsRoute
   '/reports': typeof ReportsRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByTo {
   '/requests': typeof RequestsRoute
   '/settings': typeof SettingsRoute
   '/violations': typeof ViolationsRoute
+  '/contracts/$contractId': typeof ContractsContractIdRoute
   '/employee/custody': typeof EmployeeCustodyRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/tasks': typeof TasksIndexRoute
@@ -146,7 +154,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/cases': typeof CasesRoute
-  '/contracts': typeof ContractsRoute
+  '/contracts': typeof ContractsRouteWithChildren
   '/custody': typeof CustodyRoute
   '/documents': typeof DocumentsRoute
   '/reports': typeof ReportsRoute
@@ -155,6 +163,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRouteWithChildren
   '/violations': typeof ViolationsRoute
+  '/contracts/$contractId': typeof ContractsContractIdRoute
   '/employee/custody': typeof EmployeeCustodyRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/tasks/': typeof TasksIndexRoute
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/violations'
+    | '/contracts/$contractId'
     | '/employee/custody'
     | '/tasks/$taskId'
     | '/tasks/'
@@ -192,6 +202,7 @@ export interface FileRouteTypes {
     | '/requests'
     | '/settings'
     | '/violations'
+    | '/contracts/$contractId'
     | '/employee/custody'
     | '/tasks/$taskId'
     | '/tasks'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/violations'
+    | '/contracts/$contractId'
     | '/employee/custody'
     | '/tasks/$taskId'
     | '/tasks/'
@@ -220,7 +232,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CasesRoute: typeof CasesRoute
-  ContractsRoute: typeof ContractsRoute
+  ContractsRoute: typeof ContractsRouteWithChildren
   CustodyRoute: typeof CustodyRoute
   DocumentsRoute: typeof DocumentsRoute
   ReportsRoute: typeof ReportsRoute
@@ -313,6 +325,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ViolationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/contracts/$contractId': {
+      id: '/contracts/$contractId'
+      path: '/$contractId'
+      fullPath: '/contracts/$contractId'
+      preLoaderRoute: typeof ContractsContractIdRouteImport
+      parentRoute: typeof ContractsRoute
+    }
     '/employee/custody': {
       id: '/employee/custody'
       path: '/employee/custody'
@@ -351,6 +370,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ContractsRouteChildren {
+  ContractsContractIdRoute: typeof ContractsContractIdRoute
+}
+
+const ContractsRouteChildren: ContractsRouteChildren = {
+  ContractsContractIdRoute: ContractsContractIdRoute,
+}
+
+const ContractsRouteWithChildren = ContractsRoute._addFileChildren(
+  ContractsRouteChildren,
+)
+
 interface TasksRouteChildren {
   TasksTaskIdRoute: typeof TasksTaskIdRoute
   TasksIndexRoute: typeof TasksIndexRoute
@@ -366,7 +397,7 @@ const TasksRouteWithChildren = TasksRoute._addFileChildren(TasksRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CasesRoute: CasesRoute,
-  ContractsRoute: ContractsRoute,
+  ContractsRoute: ContractsRouteWithChildren,
   CustodyRoute: CustodyRoute,
   DocumentsRoute: DocumentsRoute,
   ReportsRoute: ReportsRoute,

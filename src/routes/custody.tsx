@@ -4,8 +4,8 @@ import { RotateCcw } from "lucide-react";
 import { PageShell, Panel } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { SearchSelect } from "@/components/legal/SearchSelect";
-import { assets } from "@/lib/legal-data";
 import { useCategories, useStatuses } from "@/lib/custody-options";
+import { useProfilesOptions } from "@/lib/useSupabase";
 
 export const Route = createFileRoute("/custody")({
   head: () => ({
@@ -27,6 +27,7 @@ function CustodyPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const { options: categories, add: addCategory } = useCategories();
   const { options: statuses, add: addStatus } = useStatuses();
+  const profilesOptions = useProfilesOptions();
 
   const hasFilters = !!catFilter || !!statusFilter;
 
@@ -79,18 +80,18 @@ function CustodyPage() {
           title="سجل العهد"
           addLabel="إسناد عهدة"
           storageKey="assets"
-          seed={assets}
+          tableName="assets"
+          seed={[]}
           idKey="code"
           idPrefix="AST-"
           fields={[
             { key: "code", label: "كود الأصل", type: "mono", required: true },
             { key: "name", label: "الاسم", required: true },
             { key: "category", label: "الفئة", type: "select", options: categories },
-            { key: "serial", label: "الرقم التسلسلي", type: "mono" },
-            { key: "employee", label: "الموظف" },
-            { key: "dept", label: "القسم" },
-            { key: "assigned", label: "تاريخ الإسناد", type: "date" },
-            { key: "expected", label: "الإرجاع المتوقع", type: "date" },
+            { key: "serial_number", label: "الرقم التسلسلي", type: "mono" },
+            { key: "employee_id", label: "الموظف", type: "select", options: profilesOptions },
+            { key: "assigned_date", label: "تاريخ الإسناد", type: "date" },
+            { key: "expected_return_date", label: "الإرجاع المتوقع", type: "date" },
             {
               key: "condition",
               label: "الحالة الفنية",

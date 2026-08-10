@@ -4,8 +4,8 @@ import { RotateCcw } from "lucide-react";
 import { PageShell, Panel } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { SearchSelect } from "@/components/legal/SearchSelect";
-import { companyDocuments } from "@/lib/legal-data";
 import { useDocumentCategories } from "@/lib/document-categories";
+import { useProfilesOptions } from "@/lib/useSupabase";
 
 export const Route = createFileRoute("/documents")({
   head: () => ({
@@ -28,6 +28,7 @@ export const Route = createFileRoute("/documents")({
 function DocumentsPage() {
   const [filter, setFilter] = useState("");
   const { options: categories, add: addCategory } = useDocumentCategories();
+  const profilesOptions = useProfilesOptions();
 
   return (
     <PageShell
@@ -66,7 +67,8 @@ function DocumentsPage() {
           subtitle="رقم المستند، الجهة المُصدِرة، تواريخ الإصدار والانتهاء"
           addLabel="مستند جديد"
           storageKey="documents"
-          seed={companyDocuments}
+          tableName="documents"
+          seed={[]}
           idKey="no"
           idPrefix="DOC-"
           fields={[
@@ -82,10 +84,10 @@ function DocumentsPage() {
               required: true,
             },
             { key: "authority", label: "الجهة المُصدِرة" },
-            { key: "issue", label: "الإصدار", type: "date" },
-            { key: "expiry", label: "الانتهاء", type: "date" },
-            { key: "remind", label: "التذكير (يوم)", type: "number" },
-            { key: "owner", label: "المسؤول" },
+            { key: "issue_date", label: "الإصدار", type: "date" },
+            { key: "expiry_date", label: "الانتهاء", type: "date" },
+            { key: "remind_days", label: "التذكير (يوم)", type: "number" },
+            { key: "owner_id", label: "المسؤول", type: "select", options: profilesOptions },
             {
               key: "status",
               label: "الحالة",

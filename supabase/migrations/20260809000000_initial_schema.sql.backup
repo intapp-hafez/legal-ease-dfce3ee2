@@ -1,0 +1,132 @@
+-- Initial Schema for INT Legal Management System
+
+-- 1. Profiles Table (Linked to Supabase Auth)
+CREATE TABLE public.profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  full_name TEXT NOT NULL,
+  employee_code TEXT UNIQUE,
+  department TEXT,
+  role TEXT DEFAULT 'موظف',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Tasks Table
+CREATE TABLE public.tasks (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  no TEXT UNIQUE NOT NULL,
+  title TEXT NOT NULL,
+  category TEXT,
+  priority TEXT,
+  assignee_id UUID REFERENCES public.profiles(id),
+  due_date DATE,
+  status TEXT DEFAULT 'جديدة',
+  progress INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. Documents Table
+CREATE TABLE public.documents (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  no TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  category TEXT,
+  authority TEXT,
+  issue_date DATE,
+  expiry_date DATE,
+  status TEXT DEFAULT 'نشط',
+  owner_id UUID REFERENCES public.profiles(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 4. Contracts Table
+CREATE TABLE public.contracts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  no TEXT UNIQUE NOT NULL,
+  employee_id UUID REFERENCES public.profiles(id),
+  type TEXT,
+  start_date DATE,
+  end_date DATE,
+  salary NUMERIC(10,2),
+  status TEXT DEFAULT 'مسودة',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5. Assets Table
+CREATE TABLE public.assets (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  code TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  category TEXT,
+  employee_id UUID REFERENCES public.profiles(id),
+  status TEXT DEFAULT 'متاحة',
+  condition TEXT DEFAULT 'جيدة',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Function to automatically update "updated_at" columns
+CREATE OR REPLACE FUNCTION update_modified_column()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- Apply triggers for updated_at
+CREATE TRIGGER update_profiles_modtime BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_tasks_modtime BEFORE UPDATE ON public.tasks FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_documents_modtime BEFORE UPDATE ON public.documents FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_contracts_modtime BEFORE UPDATE ON public.contracts FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_assets_modtime BEFORE UPDATE ON public.assets FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.contracts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.assets ENABLE ROW LEVEL SECURITY;
+
+-- -------------------------------------------------------------
+-- RLS POLICIES
+-- -------------------------------------------------------------
+
+-- 1. Profiles: Admins can see all, employees can see everyone's basic info
+CREATE POLICY "Public Profiles are viewable by everyone" ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can update their own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+
+-- 2. Tasks: Admins see all, assignees see their own
+CREATE POLICY "Tasks are viewable by assignee or admins" ON public.tasks FOR SELECT USING (
+  auth.uid() = assignee_id OR 
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('مدير النظام', 'المستشار القانوني'))
+);
+CREATE POLICY "Tasks can be created by admins" ON public.tasks FOR INSERT WITH CHECK (
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('مدير النظام', 'المستشار القانوني'))
+);
+CREATE POLICY "Tasks can be updated by assignee or admins" ON public.tasks FOR UPDATE USING (
+  auth.uid() = assignee_id OR 
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('مدير النظام', 'المستشار القانوني'))
+);
+
+-- 3. Documents: Admins see all, Owners see their own
+CREATE POLICY "Documents are viewable by owner or admins" ON public.documents FOR SELECT USING (
+  auth.uid() = owner_id OR 
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('مدير النظام', 'المستشار القانوني', 'الموارد البشرية'))
+);
+
+-- 4. Contracts: Admins/HR see all, Employee sees their own
+CREATE POLICY "Contracts are viewable by employee or HR/admins" ON public.contracts FOR SELECT USING (
+  auth.uid() = employee_id OR 
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('مدير النظام', 'المستشار القانوني', 'الموارد البشرية'))
+);
+
+-- 5. Assets: Admins see all, Employee sees their own
+CREATE POLICY "Assets are viewable by assigned employee or admins" ON public.assets FOR SELECT USING (
+  auth.uid() = employee_id OR 
+  EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('مدير النظام', 'المستشار القانوني'))
+);

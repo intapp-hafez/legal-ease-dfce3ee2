@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export const baseCategories = [
   "لابتوب",
@@ -34,11 +36,6 @@ export const baseStatuses = [
 export const CATEGORY_KEY = "custody-categories";
 export const STATUS_KEY = "custody-statuses";
 
-const LEGACY: Record<string, string> = {
-  [CATEGORY_KEY]: "custody-extra-categories",
-  [STATUS_KEY]: "custody-extra-statuses",
-};
-
 export function normalizeOption(s: string) {
   return s
     .replace(/[\u064B-\u0652\u0670]/g, "")
@@ -48,29 +45,6 @@ export function normalizeOption(s: string) {
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
-}
-
-const EVENT = "custody-options-changed";
-
-function read(key: string, base: string[]): string[] {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw) as string[];
-    const legacy = localStorage.getItem(LEGACY[key] ?? "");
-    if (legacy) return [...base, ...(JSON.parse(legacy) as string[])];
-  } catch {
-    /* ignore */
-  }
-  return base;
-}
-
-function write(key: string, list: string[]) {
-  try {
-    localStorage.setItem(key, JSON.stringify(list));
-  } catch {
-    /* ignore */
-  }
-  window.dispatchEvent(new CustomEvent(EVENT, { detail: key }));
 }
 
 export type OptionsApi = {
@@ -83,67 +57,60 @@ export type OptionsApi = {
 };
 
 export function useOptionList(key: string, base: string[]): OptionsApi {
-  const [options, setOptions] = useState<string[]>(base);
+  const queryClient = useQueryClient();
+  const dbKey = `option-list:${key}`;
 
-  useEffect(() => {
-    const sync = () => setOptions(read(key, base));
-    sync();
-    const onEvt = (e: Event) => {
-      if ((e as CustomEvent).detail === key) sync();
-    };
-    window.addEventListener(EVENT, onEvt);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener(EVENT, onEvt);
-      window.removeEventListener("storage", sync);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  const { data: options = base } = useQuery({
+    queryKey: ["settings", dbKey],
+    queryFn: async () => {
+      const { data } = await supabase.from("settings").select("value").eq("key", dbKey).single();
+      if (data?.value && Array.isArray(data.value)) return data.value as string[];
+      return base;
+    }
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (newList: string[]) => {
+      await supabase.from("settings").upsert({ key: dbKey, value: newList });
+      return newList;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings", dbKey] })
+  });
 
   const add = useCallback(
     (value: string) => {
       const v = value.trim();
       if (!v) return "الرجاء إدخال اسم صالح.";
-      const current = read(key, base);
-      if (current.some((o) => normalizeOption(o) === normalizeOption(v)))
+      if (options.some((o) => normalizeOption(o) === normalizeOption(v)))
         return `الاسم «${v}» موجود مسبقًا، لا يمكن التكرار.`;
-      write(key, [...current, v]);
+      mutation.mutate([...options, v]);
       return null;
     },
-    [key, base],
+    [options, mutation],
   );
 
   const rename = useCallback(
     (oldValue: string, next: string) => {
       const v = next.trim();
       if (!v) return "الرجاء إدخال اسم صالح.";
-      const current = read(key, base);
       if (
-        current.some(
+        options.some(
           (o) => o !== oldValue && normalizeOption(o) === normalizeOption(v),
         )
       )
         return `الاسم «${v}» موجود مسبقًا، لا يمكن التكرار.`;
-      write(
-        key,
-        current.map((o) => (o === oldValue ? v : o)),
-      );
+      mutation.mutate(options.map((o) => (o === oldValue ? v : o)));
       return null;
     },
-    [key, base],
+    [options, mutation],
   );
 
   const remove = useCallback(
-    (value: string) => {
-      write(
-        key,
-        read(key, base).filter((o) => o !== value),
-      );
-    },
-    [key, base],
+    (value: string) => mutation.mutate(options.filter((o) => o !== value)),
+    [options, mutation],
   );
 
-  const reset = useCallback(() => write(key, base), [key, base]);
+  const reset = useCallback(() => mutation.mutate(base), [base, mutation]);
 
   return { options, add, rename, remove, reset };
 }

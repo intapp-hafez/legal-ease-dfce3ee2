@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-
-/** Generic, persisted, editable option list used by "النوع / التصنيف" style selects. */
+import { useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export function normalizeOptionValue(s: string) {
   return s
@@ -13,27 +13,6 @@ export function normalizeOptionValue(s: string) {
     .toLowerCase();
 }
 
-const EVENT = "option-list-changed";
-
-function read(key: string, base: string[]): string[] {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw) as string[];
-  } catch {
-    /* ignore */
-  }
-  return base;
-}
-
-function write(key: string, list: string[]) {
-  try {
-    localStorage.setItem(key, JSON.stringify(list));
-  } catch {
-    /* ignore */
-  }
-  window.dispatchEvent(new CustomEvent(EVENT, { detail: key }));
-}
-
 export type OptionListApi = {
   options: string[];
   /** returns an error message, or null on success */
@@ -44,59 +23,60 @@ export type OptionListApi = {
 };
 
 export function useOptionList(key: string, base: string[]): OptionListApi {
-  const [options, setOptions] = useState<string[]>(base);
-  const baseRef = useMemo(() => base, [base]);
+  const queryClient = useQueryClient();
+  const dbKey = `option-list:${key}`;
 
-  useEffect(() => {
-    const sync = () => setOptions(read(key, baseRef));
-    sync();
-    const onEvt = (e: Event) => {
-      if ((e as CustomEvent).detail === key) sync();
-    };
-    window.addEventListener(EVENT, onEvt);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener(EVENT, onEvt);
-      window.removeEventListener("storage", sync);
-    };
-  }, [key, baseRef]);
+  const { data: options = base } = useQuery({
+    queryKey: ["settings", dbKey],
+    queryFn: async () => {
+      const { data } = await supabase.from("settings").select("value").eq("key", dbKey).single();
+      if (data?.value && Array.isArray(data.value)) return data.value as string[];
+      return base;
+    }
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (newList: string[]) => {
+      await supabase.from("settings").upsert({ key: dbKey, value: newList });
+      return newList;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings", dbKey] })
+  });
 
   const add = useCallback(
     (value: string) => {
       const v = value.trim();
       if (!v) return "الرجاء إدخال اسم صالح.";
-      const current = read(key, baseRef);
-      if (current.some((o) => normalizeOptionValue(o) === normalizeOptionValue(v)))
+      if (options.some((o) => normalizeOptionValue(o) === normalizeOptionValue(v)))
         return `الاسم «${v}» موجود مسبقًا، لا يمكن التكرار.`;
-      write(key, [...current, v]);
+      mutation.mutate([...options, v]);
       return null;
     },
-    [key, baseRef],
+    [options, mutation],
   );
 
   const rename = useCallback(
     (oldValue: string, next: string) => {
       const v = next.trim();
       if (!v) return "الرجاء إدخال اسم صالح.";
-      const current = read(key, baseRef);
       if (
-        current.some(
+        options.some(
           (o) => o !== oldValue && normalizeOptionValue(o) === normalizeOptionValue(v),
         )
       )
         return `الاسم «${v}» موجود مسبقًا، لا يمكن التكرار.`;
-      write(key, current.map((o) => (o === oldValue ? v : o)));
+      mutation.mutate(options.map((o) => (o === oldValue ? v : o)));
       return null;
     },
-    [key, baseRef],
+    [options, mutation],
   );
 
   const remove = useCallback(
-    (value: string) => write(key, read(key, baseRef).filter((o) => o !== value)),
-    [key, baseRef],
+    (value: string) => mutation.mutate(options.filter((o) => o !== value)),
+    [options, mutation],
   );
 
-  const reset = useCallback(() => write(key, baseRef), [key, baseRef]);
+  const reset = useCallback(() => mutation.mutate(base), [base, mutation]);
 
   return { options, add, rename, remove, reset };
 }

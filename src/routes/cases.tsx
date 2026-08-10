@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageShell } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
-import { cases } from "@/lib/legal-data";
 import { useOptionList } from "@/lib/option-lists";
+import { useProfilesOptions } from "@/lib/useSupabase";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 const baseCaseTypes = ["تجاري", "عمالي", "مدني", "جنائي", "إداري", "ملكية فكرية"];
 
@@ -23,6 +25,24 @@ export const Route = createFileRoute("/cases")({
 
 function CasesPage() {
   const { options: caseTypes, add: addCaseType } = useOptionList("case-types", baseCaseTypes);
+  const profilesOptions = useProfilesOptions();
+
+  const { data: stats } = useQuery({
+    queryKey: ["cases-stats"],
+    queryFn: async () => {
+      const { data } = await supabase.from("cases").select("*");
+      if (!data) return { open: 0, court: 0, hearings: 0, value: 0 };
+      
+      const open = data.filter((c: any) => c.status !== "مغلقة" && c.status !== "مؤرشف").length;
+      const court = data.filter((c: any) => c.status === "أمام المحكمة").length;
+      const hearings = data.filter((c: any) => c.hearing_date && new Date(c.hearing_date).getMonth() === new Date().getMonth()).length;
+      const value = data.reduce((acc: number, c: any) => acc + (Number(c.value) || 0), 0);
+      
+      return { open, court, hearings, value };
+    }
+  });
+
+  const statValues = stats || { open: 0, court: 0, hearings: 0, value: 0 };
 
   return (
     <PageShell
@@ -31,10 +51,10 @@ function CasesPage() {
     >
       <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "قضايا مفتوحة", value: 7 },
-          { label: "أمام المحكمة", value: 3 },
-          { label: "جلسات هذا الشهر", value: 2 },
-          { label: "إجمالي القيمة المالية", value: "630,000" },
+          { label: "قضايا مفتوحة", value: statValues.open },
+          { label: "أمام المحكمة", value: statValues.court },
+          { label: "جلسات هذا الشهر", value: statValues.hearings },
+          { label: "إجمالي القيمة المالية", value: statValues.value.toLocaleString() },
         ].map((s) => (
           <div key={s.label} className="rounded-xl border border-border bg-card p-4">
             <p className="font-display text-2xl font-bold text-card-foreground">{s.value}</p>
@@ -47,7 +67,8 @@ function CasesPage() {
         title="سجل القضايا"
         addLabel="قضية جديدة"
         storageKey="cases"
-        seed={cases}
+        tableName="cases"
+        seed={[]}
         idKey="no"
         idPrefix="CS-"
         fields={[
@@ -64,10 +85,10 @@ function CasesPage() {
           { key: "opponent", label: "الخصم" },
           { key: "court", label: "المحكمة" },
           { key: "firm", label: "مكتب المحاماة" },
-          { key: "lawyer", label: "المحامي" },
-          { key: "start", label: "البداية", type: "date" },
-          { key: "hearing", label: "الجلسة القادمة", type: "date" },
-          { key: "value", label: "القيمة" },
+          { key: "lawyer_id", label: "المحامي", type: "select", options: profilesOptions },
+          { key: "start_date", label: "البداية", type: "date" },
+          { key: "hearing_date", label: "الجلسة القادمة", type: "date" },
+          { key: "value", label: "القيمة", type: "number" },
           {
             key: "priority",
             label: "الأولوية",

@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import { auditLog as seedAudit } from "@/lib/legal-data";
+import { useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export type AuditEntry = {
+  id?: string;
   time: string;
   user: string;
   action: string;
@@ -10,76 +12,75 @@ export type AuditEntry = {
   details?: string;
 };
 
-const KEY = "int-legal:audit";
-
-/** Current signed-in user (frontend prototype — no auth backend). */
-export const CURRENT_USER = "أ. حافظ رحيم";
+/** Current signed-in IP (prototype) */
 const CURRENT_IP = "10.0.4.18";
 
-function stamp() {
-  const d = new Date();
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-
-function read(): AuditEntry[] {
-  if (typeof window === "undefined") return seedAudit as AuditEntry[];
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    if (!raw) return seedAudit as AuditEntry[];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as AuditEntry[]) : (seedAudit as AuditEntry[]);
-  } catch {
-    return seedAudit as AuditEntry[];
-  }
-}
-
 /** Appends an entry to the persisted audit log and notifies listeners. */
-export function logAudit(entry: {
+export async function logAudit(entry: {
   action: string;
   target: string;
-  details?: string;
-  user?: string;
+  details?: string | undefined;
+  user_id?: string | undefined;
 }) {
-  const next: AuditEntry[] = [
-    {
-      time: stamp(),
-      user: entry.user ?? CURRENT_USER,
-      action: entry.action,
-      target: entry.target,
-      ip: CURRENT_IP,
-      ...(entry.details ? { details: entry.details } : {}),
-    },
-    ...read(),
-  ].slice(0, 300);
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(next));
-    window.dispatchEvent(new CustomEvent("int-legal:audit-changed"));
-  } catch {
-    /* storage unavailable */
+  const { error } = await supabase.from("audit_logs").insert({
+    action: entry.action,
+    target: entry.target,
+    details: entry.details,
+    user_id: entry.user_id || undefined,
+    ip_address: CURRENT_IP,
+  });
+  
+  if (error) {
+    console.error("Failed to log audit:", error);
   }
 }
 
 /** Reactive access to the audit log. */
 export function useAuditLog() {
-  const [entries, setEntries] = useState<AuditEntry[]>(seedAudit as AuditEntry[]);
+  const queryClient = useQueryClient();
 
-  const refresh = useCallback(() => setEntries(read()), []);
+  const { data: entries = [], isLoading } = useQuery({
+    queryKey: ["audit_logs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("audit_logs")
+        .select(`
+          id,
+          action_time,
+          action,
+          target,
+          details,
+          ip_address,
+          profiles(full_name)
+        `)
+        .order("action_time", { ascending: false })
+        .limit(300);
 
-  useEffect(() => {
-    refresh();
-    window.addEventListener("int-legal:audit-changed", refresh);
-    return () => window.removeEventListener("int-legal:audit-changed", refresh);
-  }, [refresh]);
+      if (error) throw error;
+      
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        time: new Date(row.action_time).toLocaleString("ar-SA"),
+        user: row.profiles?.full_name || "النظام",
+        action: row.action,
+        target: row.target,
+        ip: row.ip_address,
+        details: row.details,
+      }));
+    }
+  });
+
+  const clearMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("audit_logs").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["audit_logs"] }),
+  });
 
   const clear = useCallback(() => {
-    try {
-      window.localStorage.removeItem(KEY);
-    } catch {
-      /* ignore */
-    }
-    setEntries(seedAudit as AuditEntry[]);
-  }, []);
+    clearMutation.mutate();
+  }, [clearMutation]);
 
-  return { entries, clear };
+  return { entries, clear, isLoading };
 }

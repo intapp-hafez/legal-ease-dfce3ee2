@@ -80,8 +80,8 @@ export function AccessControl() {
 
   function submit() {
     if (!draft) return;
-    if (!draft.name.trim() || !draft.username.trim() || !draft.password.trim()) {
-      setError("الاسم واسم المستخدم وكلمة المرور مطلوبة");
+    if (!draft.name.trim() || !draft.username.trim()) {
+      setError("الاسم واسم المستخدم مطلوبان");
       return;
     }
     const dup = users.some(
@@ -102,18 +102,9 @@ export function AccessControl() {
         title="المستخدمون والأدوار"
         subtitle="إدارة حسابات الدخول وتعيين الدور لكل مستخدم"
         action={
-          canManage ? (
-            <button
-              onClick={() => {
-                setDraft(emptyUser());
-                setError(null);
-              }}
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
-            >
-              <Plus className="size-3.5" />
-              مستخدم جديد
-            </button>
-          ) : null
+          <div className="flex h-10 items-center justify-between rounded-lg border border-border bg-secondary/30 px-3">
+            <span className="text-xs font-semibold">مستخدمي النظام ({users.length})</span>
+          </div>
         }
       >
         {!canManage ? (
@@ -135,7 +126,7 @@ export function AccessControl() {
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u.id} className="border-b border-border/70 last:border-0">
+                <tr key={u.id} className="group border-b border-border/70 last:border-0">
                   <td className="px-3 py-2.5 font-medium text-foreground">{u.name}</td>
                   <td className="px-3 py-2.5 font-mono text-xs text-muted-foreground">{u.username}</td>
                   <td className="px-3 py-2.5 text-xs">{roleLabel(u.role)}</td>
@@ -167,9 +158,10 @@ export function AccessControl() {
                           aria-label={`حذف ${u.name}`}
                           disabled={u.id === user?.id}
                           onClick={() => removeUser(u.id)}
-                          className="rounded-md border border-border p-1.5 text-destructive hover:bg-destructive/10 disabled:opacity-40"
+                          className="rounded p-1 text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                          title="لا يمكن الحذف من الواجهة"
                         >
-                          <Trash2 className="size-3.5" />
+                          <Trash2 className="size-4" />
                         </button>
                       </div>
                     </td>
@@ -347,13 +339,15 @@ export function AccessControl() {
                   className="h-9 w-full rounded-lg border border-border bg-background px-3 font-mono text-sm outline-none focus:ring-2 focus:ring-ring/40"
                 />
               </Field>
-              <Field label="كلمة المرور">
-                <input
-                  value={draft.password}
-                  onChange={(e) => setDraft({ ...draft, password: e.target.value })}
-                  className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
-                />
-              </Field>
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-medium text-foreground">كلمة المرور (مخفية)</span>
+                    <input
+                      type="password"
+                      value="********"
+                      disabled
+                      className="h-9 w-full rounded-md border border-border bg-secondary/50 px-3 text-sm text-muted-foreground outline-none"
+                    />
+                  </label>
               <Field label="الدور">
                 <select
                   value={draft.role}
