@@ -72,12 +72,13 @@ export type User = {
   password?: string;
   role: RoleId;
   active: boolean;
+  department?: string;
 };
 
 export const seedUsers: User[] = [
   { id: "U-01", name: "أ. حافظ رحيم", username: "superadmin", password: "1234", role: "super_admin", active: true },
   { id: "U-02", name: "م. سارة يوسف", username: "admin", password: "1234", role: "admin", active: true },
-  { id: "U-03", name: "خالد الشمري", username: "employee", password: "1234", role: "employee", active: true },
+  { id: "U-03", name: "خالد الشمري", username: "employee", password: "1234", role: "employee", active: true, department: "الموارد البشرية" },
 ];
 
 const USERS_KEY = "int-legal:users";

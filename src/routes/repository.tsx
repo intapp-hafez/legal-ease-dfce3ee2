@@ -15,7 +15,13 @@ import {
   Settings,
   Filter,
   Trash2,
+  Share2,
+  Pencil,
 } from "lucide-react";
+import { ShareFolderModal } from "@/components/legal/ShareFolderModal";
+import { RenameFolderModal } from "@/components/legal/RenameFolderModal";
+import { DeleteFolderModal } from "@/components/legal/DeleteFolderModal";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/repository")({
   head: () => ({
@@ -29,7 +35,17 @@ export const Route = createFileRoute("/repository")({
 function RepositoryPage() {
   const { can, user } = useAuth();
   const canEdit = can("repository", "edit");
+  const isSuperAdmin = user?.role === "super_admin";
   const queryClient = useQueryClient();
+
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [selectedFolderForShare, setSelectedFolderForShare] = useState<{ id: string, name: string, shared_with: string[], shared_departments: string[] } | null>(null);
+  
+  const [renameModalOpen, setRenameModalOpen] = useState(false);
+  const [selectedFolderForRename, setSelectedFolderForRename] = useState<{ id: string, name: string } | null>(null);
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedFolderForDelete, setSelectedFolderForDelete] = useState<{ id: string, name: string } | null>(null);
 
   const { data: repositoryRows = [], isLoading } = useQuery({
     queryKey: ["repository"],
@@ -56,6 +72,8 @@ function RepositoryPage() {
         department: row.department,
         owner: row.profiles?.full_name,
         status: row.status,
+        shared_with: row.shared_with || [],
+        shared_departments: row.shared_departments || [],
         children: [],
         parent_id: row.parent_id
       });
@@ -89,10 +107,35 @@ function RepositoryPage() {
   const [filterDate, setFilterDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
+  // Apply Access Control (Filtering based on mock auth role and shared_with)
+  const accessibleItems = useMemo(() => {
+    const filterNodes = (nodes: any[]): any[] => {
+        return nodes.filter(item => {
+            const hasNoUserRestrictions = !item.shared_with || item.shared_with.length === 0;
+            const hasNoDeptRestrictions = !item.shared_departments || item.shared_departments.length === 0;
+            const isPublic = hasNoUserRestrictions && hasNoDeptRestrictions;
+            
+            if (isPublic) return true;
+            if (user?.role === "super_admin" || user?.role === "admin") return true;
+            
+            const isSharedWithUser = item.shared_with?.includes(user?.id);
+            const isSharedWithDept = user?.department && item.shared_departments?.includes(user?.department);
+            
+            const isShared = isSharedWithUser || isSharedWithDept;
+            
+            if (item.children && item.children.length > 0) {
+                item.children = filterNodes(item.children);
+            }
+            return isShared;
+        });
+    };
+    return filterNodes(data);
+  }, [data, user]);
+
   // Simple recursive search to find current folder
   const currentFolder = useMemo(() => {
     if (path.length === 0) return null;
-    let current: ArchiveNode[] = data;
+    let current: ArchiveNode[] = accessibleItems;
     let node: ArchiveNode | null = null;
     
     for (const id of path) {
@@ -105,7 +148,7 @@ function RepositoryPage() {
       }
     }
     return node;
-  }, [path, data]);
+  }, [path, accessibleItems]);
 
   // Recursive helper to get all files for global views
   const getAllFiles = (nodes: ArchiveNode[]): ArchiveNode[] => {
@@ -221,29 +264,120 @@ function RepositoryPage() {
     const { files, department, category, fileType, employee, issueDate, expiryDate } = formData;
     const parent_id = path.length > 0 ? path[path.length - 1] : null;
 
-    const inserts = files.map((f: File) => ({
-       name: f.name,
-       type: "file",
-       size: (f.size / 1024 / 1024).toFixed(2) + " MB",
-       department,
-       category,
-       file_type: fileType || "مستند",
-       owner_id: employee || null, // Assuming employee comes back as an ID if they selected it, if not might fail constraint
-       status: "Active",
-       confidentiality: category === "سري للغاية" ? "Highly Confidential" : "Normal",
-       parent_id
-    }));
+    // Fetch storage preference
+    const { data: settingData } = await supabase
+      .from("settings")
+      .select("value")
+      .eq("key", "storage-path")
+      .maybeSingle();
+      
+    const storageMode = settingData?.value === "local" ? "local" : "database";
 
-    for (const item of inserts) {
-       await createNode.mutateAsync(item);
+    for (const f of files) {
+      let fileUrl = "";
+      
+      if (storageMode === "local") {
+        // Upload via PHP script to local server documents folder
+        try {
+          const uploadData = new FormData();
+          uploadData.append("file", f);
+          const response = await fetch("/upload.php", {
+            method: "POST",
+            body: uploadData
+          });
+          if (response.ok) {
+            const result = await response.json();
+            fileUrl = result.url || result.path || "";
+          } else {
+            console.error("Local upload failed");
+            toast.error("فشل رفع الملف إلى الخادم المحلي");
+          }
+        } catch (err) {
+          console.error("Local upload error", err);
+          toast.error("حدث خطأ أثناء رفع الملف محلياً");
+        }
+      } else {
+        // Upload to Supabase Storage (Database mode)
+        try {
+          const fileExt = f.name.split('.').pop();
+          const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+          const filePath = `${parent_id || 'root'}/${fileName}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from("legal_documents")
+            .upload(filePath, f);
+            
+          if (uploadError) {
+             console.error("Supabase upload error", uploadError);
+             toast.error("فشل رفع الملف إلى قاعدة البيانات");
+          } else {
+             const { data: publicUrlData } = supabase.storage
+               .from("legal_documents")
+               .getPublicUrl(filePath);
+             fileUrl = publicUrlData.publicUrl;
+          }
+        } catch (err) {
+          console.error("Supabase upload error", err);
+        }
+      }
+
+      // Save metadata to repository
+      const item = {
+         name: f.name,
+         type: "file",
+         size: (f.size / 1024 / 1024).toFixed(2) + " MB",
+         department,
+         category,
+         file_type: fileType || "مستند",
+         owner_id: employee || null,
+         status: "Active",
+         confidentiality: category === "سري للغاية" ? "Highly Confidential" : "Normal",
+         parent_id,
+         file_url: fileUrl || undefined // Store the actual URL!
+      };
+      await createNode.mutateAsync(item);
     }
+
     setUploadModalOpen(false);
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDeleteClick = async (e: React.MouseEvent, node: ArchiveNode) => {
     e.stopPropagation();
-    if (!confirm("هل أنت متأكد من الحذف؟ سيتم حذف جميع الملفات الداخلية أيضاً.")) return;
-    await deleteNode.mutateAsync(id);
+    
+    // Quick frontend check
+    if (node.type === "folder" && node.children && node.children.length > 0) {
+      toast.error("لا يمكن حذف المجلد لوجود بيانات بداخله.");
+      return;
+    }
+    
+    // Deep backend check (just to be absolutely sure no documents are linked)
+    if (node.type === "folder") {
+      const { data, error } = await supabase
+        .from("repository")
+        .select("id")
+        .eq("parent_id", node.id)
+        .limit(1);
+        
+      if (!error && data && data.length > 0) {
+        toast.error("لا يمكن حذف المجلد لوجود بيانات بداخله.");
+        return;
+      }
+    }
+
+    setSelectedFolderForDelete({ id: node.id, name: node.name });
+    setDeleteModalOpen(true);
+  };
+
+  const handleShareClick = (e: React.MouseEvent, node: ArchiveNode) => {
+    e.stopPropagation();
+    setSelectedFolderForShare({ id: node.id, name: node.name, shared_with: node.shared_with || [], shared_departments: node.shared_departments || [] });
+    setShareModalOpen(true);
+  };
+
+  const handleRenameClick = (e: React.MouseEvent, node: ArchiveNode) => {
+    e.stopPropagation();
+    setSelectedFolderForRename({ id: node.id, name: node.name });
+    setRenameModalOpen(true);
   };
 
   return (
@@ -358,12 +492,14 @@ function RepositoryPage() {
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {items.map((node) => (
-                <button
+                <div
                   key={node.id}
                   onClick={() => navigateTo(node)}
-                  className="group relative flex flex-col rounded-xl border border-border bg-card p-4 text-right transition-all hover:border-primary/30 hover:shadow-md"
+                  role="button"
+                  tabIndex={0}
+                  className="group relative flex flex-col rounded-xl border border-border bg-card p-4 text-right transition-all hover:border-primary/30 hover:shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <div className="mb-3 flex items-start justify-between">
+                  <div className="mb-3 flex items-start justify-between w-full">
                     <div className={`flex size-10 items-center justify-center rounded-lg ${node.type === "folder" ? "bg-primary/10 text-primary" : "bg-blue-500/10 text-blue-500"}`}>
                       {node.type === "folder" ? (
                         <Folder className="size-5 fill-current opacity-80" />
@@ -373,23 +509,60 @@ function RepositoryPage() {
                     </div>
                     
                     {canEdit && (
-                      <button
-                        onClick={(e) => handleDelete(e, node.id)}
-                        className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-                        title="حذف"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
+                      <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        {node.type === "folder" && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleRenameClick(e, node);
+                              }}
+                              className="rounded-md p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                              title="إعادة تسمية"
+                            >
+                              <Pencil className="size-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleShareClick(e, node);
+                              }}
+                              className="rounded-md p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                              title="مشاركة"
+                            >
+                              <Share2 className="size-4" />
+                            </button>
+                          </>
+                        )}
+                        {isSuperAdmin && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteClick(e, node);
+                            }}
+                            className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                            title="حذف"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
-                  <h3 className="mb-1 truncate text-sm font-semibold text-card-foreground" title={node.name}>
+                  <h3 className="mb-1 truncate text-sm font-semibold text-card-foreground w-full" title={node.name}>
                     {node.name}
                   </h3>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground w-full">
                     {node.type === "folder" ? `${node.children?.length || 0} عناصر` : node.size} • {node.updatedAt}
                   </p>
-                  {node.owner && <p className="mt-1 text-[10px] text-muted-foreground">المالك: {node.owner}</p>}
-                </button>
+                  {node.owner && <p className="mt-1 text-[10px] text-muted-foreground w-full">المالك: {node.owner}</p>}
+                </div>
               ))}
             </div>
           )}
@@ -409,6 +582,26 @@ function RepositoryPage() {
       <ArchiveSettingsModal
         open={settingsModalOpen}
         onClose={() => setSettingsModalOpen(false)}
+      />
+      <ShareFolderModal
+        open={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        folderId={selectedFolderForShare?.id || null}
+        folderName={selectedFolderForShare?.name || ""}
+        initialSharedWith={selectedFolderForShare?.shared_with || []}
+        initialSharedDepartments={selectedFolderForShare?.shared_departments || []}
+      />
+      <RenameFolderModal
+        open={renameModalOpen}
+        onClose={() => setRenameModalOpen(false)}
+        folderId={selectedFolderForRename?.id || null}
+        currentName={selectedFolderForRename?.name || ""}
+      />
+      <DeleteFolderModal
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        folderId={selectedFolderForDelete?.id || null}
+        folderName={selectedFolderForDelete?.name || ""}
       />
     </ArchiveLayout>
   );

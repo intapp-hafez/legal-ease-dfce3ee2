@@ -6,7 +6,8 @@ import { CrudTable } from "@/components/legal/CrudTable";
 import { SearchSelect } from "@/components/legal/SearchSelect";
 import { useDocumentCategories } from "@/lib/document-categories";
 import { useProfilesOptions } from "@/lib/useSupabase";
-
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 export const Route = createFileRoute("/documents")({
   head: () => ({
     meta: [
@@ -29,6 +30,29 @@ function DocumentsPage() {
   const [filter, setFilter] = useState("");
   const { options: categories, add: addCategory } = useDocumentCategories();
   const profilesOptions = useProfilesOptions();
+
+  const queryClient = useQueryClient();
+
+  const { data: folderOptions = [] } = useQuery({
+    queryKey: ["repository-folders-options"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("repository")
+        .select("id, name")
+        .eq("type", "folder")
+      if (error) return [];
+      return data.map((d: any) => ({ value: d.id, label: d.name }));
+    },
+  });
+
+  const addFolder = (name: string) => {
+    supabase
+      .from("repository")
+      .insert({ name, type: "folder" })
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ["repository-folders-options"] });
+      });
+  };
 
   return (
     <PageShell
@@ -93,6 +117,21 @@ function DocumentsPage() {
               label: "الحالة",
               type: "status",
               options: ["نشط", "منتهي", "مؤرشف", "قيد المراجعة"],
+            },
+            {
+              key: "attachment",
+              label: "المرفق",
+              type: "file",
+              hideInForm: false,
+            },
+            {
+              key: "repository_folder_id",
+              label: "مجلد المستودع",
+              type: "select",
+              options: folderOptions,
+              onAddOption: addFolder,
+              addLabel: "إضافة مجلد جديد",
+              hideInForm: false,
             },
           ]}
         />

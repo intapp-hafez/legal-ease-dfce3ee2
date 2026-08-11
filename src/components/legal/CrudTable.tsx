@@ -10,6 +10,8 @@ import { downloadTemplate } from "@/lib/excel";
 import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/lib/auth";
 import { EmployeeCell } from "@/components/legal/EmployeeCell";
+import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 import { formatDate } from "@/lib/date-utils";
 
 export type Field = {
@@ -89,7 +91,9 @@ export function CrudTable<T extends Row>({
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Row>(() => emptyRow(fields));
+  const [fileUploads, setFileUploads] = useState<Record<string, File[]>>({});
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -134,6 +138,7 @@ export function CrudTable<T extends Row>({
       }
     }
     setDraft({ ...initial, [seq]: nextId(items, seq, idPrefix) });
+    setFileUploads({});
     setError(null);
     setOpen(true);
   }
@@ -141,31 +146,56 @@ export function CrudTable<T extends Row>({
   function openEdit(row: T) {
     setEditingId(String(row[idKey]));
     setDraft({ ...row });
+    setFileUploads({});
     setError(null);
     setOpen(true);
   }
 
-  function save() {
+  async function save() {
     for (const f of fields) {
       if (f.required && !String(draft[f.key] ?? "").trim()) {
         setError(`الحقل «${f.label}» مطلوب`);
         return;
       }
     }
+    
+    setSaving(true);
+    setError(null);
     const value = { ...(filters || {}), ...draft } as T;
-    if (editingId) update(editingId, value);
-    else {
-      if (items.some((it) => String(it[idKey]) === String(value[idKey]))) {
-        setError("المعرّف مستخدم بالفعل");
-        return;
+
+    try {
+      // Upload any files
+      for (const [key, files] of Object.entries(fileUploads)) {
+        if (files && files.length > 0) {
+          const file = files[0];
+          if (!file) continue;
+          const path = `uploads/${Date.now()}_${file.name}`;
+          const { data, error } = await supabase.storage.from("legal_documents").upload(path, file);
+          if (!error && data) {
+            const { data: publicUrlData } = supabase.storage.from("legal_documents").getPublicUrl(path);
+            (value as any).file_url = publicUrlData.publicUrl;
+          }
+        }
       }
-      // For UUIDs, we don't want to send an empty id to Supabase
-      if (tableName && idKey === "id") {
-        delete (value as any).id;
+
+      if (editingId) update(editingId, value);
+      else {
+        if (items.some((it) => String(it[idKey]) === String(value[idKey]))) {
+          setError("المعرّف مستخدم بالفعل");
+          setSaving(false);
+          return;
+        }
+        if (tableName && idKey === "id") {
+          delete (value as any).id;
+        }
+        create(value);
       }
-      create(value);
+      setOpen(false);
+    } catch (err: any) {
+      setError(err.message || "حدث خطأ أثناء الحفظ");
+    } finally {
+      setSaving(false);
     }
-    setOpen(false);
   }
 
   function renderCell(f: Field, row: T) {
@@ -424,8 +454,15 @@ export function CrudTable<T extends Row>({
                       f.onAddOption ? (
                         <SearchSelect
                           label={""}
-                          value={String(draft[f.key] ?? "")}
-                          onChange={(v) => setDraft({ ...draft, [f.key]: v })}
+                          value={(() => {
+                             const current = String(draft[f.key] ?? "");
+                             const opt = (f.options ?? []).find(o => typeof o === 'object' && o.value === current);
+                             return opt ? (opt as any).label : current;
+                          })()}
+                          onChange={(label) => {
+                             const opt = (f.options ?? []).find(o => (typeof o === 'string' ? o : o.label) === label);
+                             setDraft({ ...draft, [f.key]: typeof opt === 'object' ? opt.value : label });
+                          }}
                           options={(f.options ?? []).map(o => typeof o === "string" ? o : o.label)}
                           allLabel="—"
                           onAddOption={f.onAddOption}
@@ -462,8 +499,9 @@ export function CrudTable<T extends Row>({
                           accept={f.accept}
                           multiple
                           onChange={(e) => {
-                            const files = Array.from(e.target.files || []).map((file) => file.name).join("، ");
-                            setDraft({ ...draft, [f.key]: files });
+                            const files = Array.from(e.target.files || []);
+                            setFileUploads({ ...fileUploads, [f.key]: files });
+                            setDraft({ ...draft, [f.key]: files.map((file) => file.name).join("، ") });
                           }}
                           className="h-10 w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm outline-none file:ml-4 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-primary hover:file:bg-primary/20 focus:ring-2 focus:ring-ring/40"
                         />
@@ -513,9 +551,10 @@ export function CrudTable<T extends Row>({
               </button>
               <button
                 onClick={save}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                disabled={saving}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
               >
-                حفظ
+                {saving ? "جاري الحفظ..." : "حفظ"}
               </button>
             </div>
           </div>

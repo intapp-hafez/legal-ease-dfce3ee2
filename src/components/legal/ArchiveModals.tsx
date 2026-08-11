@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { X, UploadCloud, FolderPlus, File as FileIcon, Scan, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export function CreateFolderModal({
   open,
@@ -79,18 +80,18 @@ export function DocumentUploadModal({
   const [sharedEmployee, setSharedEmployee] = useState("");
   const [sharedDepartment, setSharedDepartment] = useState("");
   const [isScanning, setIsScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
   const { user } = useAuth();
 
   if (!open) return null;
 
   const handleScanDocument = () => {
+    setScanError(null);
     setIsScanning(true);
     setTimeout(() => {
-      const content = new Blob(["Scanned Document Content"], { type: "application/pdf" });
-      const scannedFile = new File([content], `Scanned_Document_${Math.floor(Math.random() * 1000)}.pdf`, { type: "application/pdf" });
-      setFiles((prev) => [...prev, scannedFile]);
       setIsScanning(false);
-    }, 2500);
+      setScanError("لا يوجد جهاز مسح ضوئي متصل");
+    }, 1500);
   };
 
   const handleFileDrop = (e: React.DragEvent) => {
@@ -133,21 +134,26 @@ export function DocumentUploadModal({
                 />
               </div>
 
-              <div 
-                onClick={isScanning ? undefined : handleScanDocument}
-                className={`flex sm:w-[180px] min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-border bg-card transition-colors p-4 ${isScanning ? "opacity-70 cursor-not-allowed" : "hover:bg-secondary"}`}
-              >
-                {isScanning ? (
-                  <Loader2 className="mb-2 size-8 text-primary animate-spin" />
-                ) : (
-                  <Scan className="mb-2 size-8 text-primary" />
+              <div className="flex flex-col gap-2">
+                <div 
+                  onClick={isScanning ? undefined : handleScanDocument}
+                  className={`flex sm:w-[180px] min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-border bg-card transition-colors p-4 ${isScanning ? "opacity-70 cursor-not-allowed" : "hover:bg-secondary"}`}
+                >
+                  {isScanning ? (
+                    <Loader2 className="mb-2 size-8 text-primary animate-spin" />
+                  ) : (
+                    <Scan className="mb-2 size-8 text-primary" />
+                  )}
+                  <p className="text-sm font-medium text-foreground text-center">
+                    {isScanning ? "جاري المسح..." : "المسح الضوئي"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground text-center">
+                    سحب من الماسحة
+                  </p>
+                </div>
+                {scanError && (
+                  <p className="text-xs text-destructive text-center font-medium w-full sm:w-[180px]">{scanError}</p>
                 )}
-                <p className="text-sm font-medium text-foreground text-center">
-                  {isScanning ? "جاري المسح..." : "المسح الضوئي"}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground text-center">
-                  سحب من الماسحة
-                </p>
               </div>
             </div>
             
@@ -322,17 +328,6 @@ export function ArchiveSettingsModal({
         </div>
 
         <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
-          {/* Storage Section - Full Width */}
-          <div className="rounded-lg border border-border p-4 bg-secondary/20">
-            <div className="flex justify-between mb-2">
-              <h4 className="text-sm font-semibold">مساحة التخزين (Storage Quota)</h4>
-              <span className="text-xs font-medium text-primary">45% مستخدم</span>
-            </div>
-            <div className="mb-2 h-2.5 w-full rounded-full bg-secondary overflow-hidden">
-              <div className="h-full bg-primary" style={{ width: "45%" }}></div>
-            </div>
-            <p className="text-xs text-muted-foreground">تم استخدام 45 جيجابايت من أصل 100 جيجابايت</p>
-          </div>
 
           <div className="grid gap-6 md:grid-cols-2">
             

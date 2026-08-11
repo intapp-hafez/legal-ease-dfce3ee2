@@ -11,6 +11,7 @@ import {
 } from "@/components/legal/DynamicSettingsPanels";
 import { SystemNotificationsManager } from "@/components/legal/SystemNotificationsManager";
 import { NotificationRulesSettings } from "@/components/legal/NotificationRulesSettings";
+import { StorageSettings } from "@/components/legal/StorageSettings";
 import { useAuditLog } from "@/lib/audit";
 
 export const Route = createFileRoute("/settings")({
@@ -49,6 +50,10 @@ function SettingsPage() {
 
       <div className="mb-5">
         <BrandingSettings />
+      </div>
+
+      <div className="mb-5">
+        <StorageSettings />
       </div>
 
       <div className="mb-5">
