@@ -281,7 +281,8 @@ function RepositoryPage() {
         try {
           const uploadData = new FormData();
           uploadData.append("file", f);
-          const response = await fetch("/upload.php", {
+          const baseUrl = import.meta.env['VITE_UPLOAD_API_URL'] || "";
+          const response = await fetch(`${baseUrl}/upload.php`, {
             method: "POST",
             body: uploadData
           });
