@@ -117,10 +117,12 @@ export function useSupabaseCollection<T extends Row>(tableName: string, idKey: k
     mutationFn: async (rows: T[]) => {
       localDb.replaceAll(rows);
       try {
-        const { data, error } = await supabase.from(tableName).upsert(rows as any).select();
+        const payload = rows.map((r) => cleanPayload(r));
+        const { data, error } = await supabase.from(tableName).upsert(payload as any, { onConflict: idKey as string }).select();
         if (error) throw error;
         return data as T[];
-      } catch {
+      } catch (err: any) {
+        console.warn(`Bulk replace error in ${tableName}, saving locally:`, err.message || err);
         return rows;
       }
     },

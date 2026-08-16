@@ -306,7 +306,7 @@ export function CrudTable<T extends Row>({
         title={title}
         fields={fields as any}
         items={items}
-        idKey={idKey}
+        idKey={sequenceKey || idKey}
         idPrefix={idPrefix}
         onApply={finishImport}
       />

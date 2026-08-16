@@ -92,7 +92,23 @@ export function mapRows(
       if (!f) continue;
       const s = String(r[header] ?? "").trim();
       if (s !== "") any = true;
-      row[key] = f.type === "number" || f.type === "progress" ? Number(s) || 0 : s;
+      let val: string | number = s;
+      if (f.type === "number" || f.type === "progress") {
+        val = Number(s) || 0;
+      } else if (f.type === "date" && s) {
+        if (s.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+          const [d, m, y] = s.split("/");
+          if (d && m && y) {
+            val = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+          }
+        } else if (s.match(/^\d{1,2}-\d{1,2}-\d{4}$/)) {
+          const [d, m, y] = s.split("-");
+          if (d && m && y) {
+            val = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+          }
+        }
+      }
+      row[key] = val;
     }
     if (any) out.push(row);
   }
