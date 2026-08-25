@@ -17,6 +17,9 @@ import {
   Trash2,
   Share2,
   Pencil,
+  Download,
+  X,
+  Eye,
 } from "lucide-react";
 import { ShareFolderModal } from "@/components/legal/ShareFolderModal";
 import { RenameFolderModal } from "@/components/legal/RenameFolderModal";
@@ -72,6 +75,7 @@ function RepositoryPage() {
         department: row.department,
         owner: row.profiles?.full_name,
         status: row.status,
+        file_url: row.file_url,
         shared_with: row.shared_with || [],
         shared_departments: row.shared_departments || [],
         children: [],
@@ -98,6 +102,56 @@ function RepositoryPage() {
   const [folderModalOpen, setFolderModalOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<{ name: string; url: string | null; isPlaceholder?: boolean } | null>(null);
+
+  const handleOpenFilePreview = async (node: ArchiveNode) => {
+    let url = node.file_url || null;
+    const fileName = node.name;
+
+    // 1. If URL not present directly, check Supabase Storage legal_documents
+    if (!url) {
+      try {
+        const foldersToSearch = ["uploads", "root", node.parent_id].filter(Boolean);
+        for (const fld of foldersToSearch) {
+          const { data: filesInBucket } = await supabase.storage.from("legal_documents").list(String(fld), {
+            search: fileName,
+          });
+          if (filesInBucket && filesInBucket.length > 0) {
+            const match = filesInBucket.find((f) => f.name.includes(fileName) || fileName.includes(f.name));
+            if (match) {
+              const { data: pUrl } = supabase.storage.from("legal_documents").getPublicUrl(`${fld}/${match.name}`);
+              if (pUrl?.publicUrl) {
+                url = pUrl.publicUrl;
+                if (node.id) {
+                  supabase.from("repository").update({ file_url: url }).eq("id", node.id);
+                }
+                break;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Error searching storage bucket:", err);
+      }
+    }
+
+    // 2. Check local documents folder
+    if (!url) {
+      try {
+        const testLocalUrl = `/documents/${encodeURIComponent(fileName)}`;
+        const res = await fetch(testLocalUrl, { method: "HEAD" });
+        if (res.ok) {
+          url = testLocalUrl;
+        }
+      } catch {}
+    }
+
+    setPreviewData({
+      name: fileName,
+      url: url,
+      isPlaceholder: !url,
+    });
+  };
 
   // Filters state
   const [search, setSearch] = useState("");
@@ -206,7 +260,7 @@ function RepositoryPage() {
     if (node.type === "folder") {
       setPath([...path, node.id]);
     } else {
-      console.log("Preview file", node.name);
+      handleOpenFilePreview(node);
     }
   };
 
@@ -604,6 +658,72 @@ function RepositoryPage() {
         folderId={selectedFolderForDelete?.id || null}
         folderName={selectedFolderForDelete?.name || ""}
       />
+
+      {previewData ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
+          onClick={() => setPreviewData(null)}
+        >
+          <div
+            className="relative w-full max-w-4xl rounded-xl border border-border bg-card p-4 shadow-lg min-h-[50vh] max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+            dir="rtl"
+          >
+            <div className="flex items-center justify-between border-b border-border/60 pb-3 mb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="size-5 text-primary" />
+                <h3 className="font-display text-base font-bold text-card-foreground">
+                  معاينة المستند: <span className="font-normal text-muted-foreground">{previewData.name}</span>
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                {previewData.url && (
+                  <a
+                    href={previewData.url}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                    aria-label="تحميل"
+                    title="تحميل الملف"
+                  >
+                    <Download className="size-4" />
+                  </a>
+                )}
+                <button
+                  onClick={() => setPreviewData(null)}
+                  className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                  aria-label="إغلاق"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 w-full bg-secondary/20 rounded-lg overflow-hidden relative flex flex-col items-center justify-center min-h-[350px]">
+              {previewData.url ? (
+                <iframe
+                  src={previewData.url}
+                  className="w-full h-full min-h-[500px] border-0 rounded-lg"
+                  title={previewData.name}
+                />
+              ) : (
+                <div className="p-8 text-center max-w-md space-y-4">
+                  <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <FileText className="size-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-base font-bold text-foreground">{previewData.name}</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      اسم المستند مسجل في المستودع، ولكن لم يتم رفع الملف الرقمي الفعلي إلى مساحة التخزين السحابية بعد.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </ArchiveLayout>
   );
 }

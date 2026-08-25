@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { Download, Pencil, Plus, RotateCcw, Search, Trash2, Upload, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Eye, FileText, Pencil, Plus, RotateCcw, Search, Trash2, Upload, X } from "lucide-react";
 import { Panel, StatusPill } from "@/components/legal/PageShell";
 import { ImportWizard, type ImportResult } from "@/components/legal/ImportWizard";
 import { SearchSelect } from "@/components/legal/SearchSelect";
@@ -21,6 +21,7 @@ export type Field = {
   options?: (string | { value: string; label: string })[];
   required?: boolean;
   hideInForm?: boolean;
+  hideInTable?: boolean;
   /** If provided, renders a searchable select with a + button to add new options. */
   onAddOption?: (value: string) => string | null | void;
   addLabel?: string;
@@ -45,9 +46,11 @@ type Props<T extends Row> = {
   /** Optional external filters, e.g. { category: "رخصة استيراد" }. Empty values are ignored. */
   filters?: Record<string, string>;
   onRowClick?: (row: T) => void;
+  /** Number of rows per page (default: 12) */
+  pageSize?: number;
 };
 
-function breakEveryWords(text: string | null | undefined, wordsPerLine = 4): string {
+function breakEveryWords(text: string | null | undefined, wordsPerLine = 2): string {
   if (!text || typeof text !== "string") return String(text ?? "—");
   const words = text.trim().split(/\s+/);
   if (words.length <= wordsPerLine) return text;
@@ -79,6 +82,7 @@ export function CrudTable<T extends Row>({
   extraActions,
   tableName,
   onRowClick,
+  pageSize = 12,
 }: Props<T>) {
   const { user } = useAuth();
 
@@ -88,6 +92,8 @@ export function CrudTable<T extends Row>({
   
   const { items, create, update, remove, reset, replaceAll, hydrated } = db;
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSizeState, setPageSizeState] = useState(pageSize);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Row>(() => emptyRow(fields));
@@ -96,6 +102,115 @@ export function CrudTable<T extends Row>({
   const [saving, setSaving] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [previewData, setPreviewData] = useState<{ name: string; url: string | null; isPlaceholder?: boolean; row?: any } | null>(null);
+
+  async function handleOpenFilePreview(row: any, fieldKey: string) {
+    const fileName = String(row[fieldKey] || row.attachment || "");
+    if (!fileName || fileName === "—") return;
+
+    let url = (row as any).file_url || null;
+    let repoDoc: any = null;
+
+    // 1. Search the repository table
+    if (!url) {
+      try {
+        // A. Search by exact name
+        const { data: exactMatches } = await supabase
+          .from("repository")
+          .select("id, name, file_url, parent_id")
+          .eq("name", fileName)
+          .limit(1);
+
+        if (exactMatches && exactMatches.length > 0) {
+          repoDoc = exactMatches[0];
+          if (repoDoc.file_url) url = repoDoc.file_url;
+        }
+
+        // B. Search by UUID if fileName is a valid UUID
+        if (!repoDoc && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(fileName)) {
+          const { data: idMatches } = await supabase
+            .from("repository")
+            .select("id, name, file_url, parent_id")
+            .eq("id", fileName)
+            .limit(1);
+          if (idMatches && idMatches.length > 0) {
+            repoDoc = idMatches[0];
+            if (repoDoc.file_url) url = repoDoc.file_url;
+          }
+        }
+
+        // C. Search by ILIKE if still not found
+        if (!repoDoc) {
+          const { data: fuzzyMatches } = await supabase
+            .from("repository")
+            .select("id, name, file_url, parent_id")
+            .ilike("name", `%${fileName.trim()}%`)
+            .limit(1);
+          if (fuzzyMatches && fuzzyMatches.length > 0) {
+            repoDoc = fuzzyMatches[0];
+            if (repoDoc.file_url) url = repoDoc.file_url;
+          }
+        }
+      } catch (err) {
+        console.warn("Error fetching repository file:", err);
+      }
+    }
+
+    // 2. If URL is still not found, check Supabase Storage legal_documents
+    if (!url) {
+      try {
+        const foldersToSearch = ["uploads", "root", repoDoc?.parent_id, row.repository_folder_id].filter(Boolean);
+        for (const fld of foldersToSearch) {
+          const { data: filesInBucket } = await supabase.storage.from("legal_documents").list(String(fld), {
+            search: fileName,
+          });
+          if (filesInBucket && filesInBucket.length > 0) {
+            const match = filesInBucket.find((f) => f.name.includes(fileName) || fileName.includes(f.name));
+            if (match) {
+              const { data: pUrl } = supabase.storage.from("legal_documents").getPublicUrl(`${fld}/${match.name}`);
+              if (pUrl?.publicUrl) {
+                url = pUrl.publicUrl;
+                if (repoDoc?.id) {
+                  supabase.from("repository").update({ file_url: url }).eq("id", repoDoc.id);
+                }
+                break;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Error searching storage bucket:", err);
+      }
+    }
+
+    // 3. Check if local documents folder has it
+    if (!url) {
+      try {
+        const testLocalUrl = `/documents/${encodeURIComponent(fileName)}`;
+        const res = await fetch(testLocalUrl, { method: "HEAD" });
+        if (res.ok) {
+          url = testLocalUrl;
+        }
+      } catch {}
+    }
+
+    setPreviewData({
+      name: fileName,
+      url: url,
+      isPlaceholder: !url,
+      row,
+    });
+  }
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, filters]);
+
+  useEffect(() => {
+    if (pageSize) {
+      setPageSizeState(pageSize);
+    }
+  }, [pageSize]);
 
   function finishImport(next: T[], r: ImportResult) {
     replaceAll(next);
@@ -111,8 +226,6 @@ export function CrudTable<T extends Row>({
     });
   }
 
-
-
   const filtered = useMemo(() => {
     const active = Object.entries(filters ?? {}).filter(([, v]) => v);
     let list = items;
@@ -124,6 +237,36 @@ export function CrudTable<T extends Row>({
       Object.values(it).some((v) => String(v).toLowerCase().includes(q)),
     );
   }, [items, query, filters]);
+
+  const visibleFields = useMemo(() => fields.filter((f) => !f.hideInTable), [fields]);
+
+  const totalRows = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSizeState));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const startIndex = (safePage - 1) * pageSizeState;
+  const endIndex = Math.min(startIndex + pageSizeState, totalRows);
+
+  const paginatedRows = useMemo(() => {
+    return filtered.slice(startIndex, endIndex);
+  }, [filtered, startIndex, endIndex]);
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (safePage > 3) pages.push("...");
+      const start = Math.max(2, safePage - 1);
+      const end = Math.min(totalPages - 1, safePage + 1);
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      if (safePage < totalPages - 2) pages.push("...");
+      pages.push(totalPages);
+    }
+    return pages;
+  };
 
 
   function openCreate() {
@@ -210,8 +353,35 @@ export function CrudTable<T extends Row>({
     if (f.type === "select" && Array.isArray(f.options)) {
       const option = f.options.find((o) => typeof o === "object" && (o.value === String(v) || o.value?.toLowerCase() === String(v)?.toLowerCase()));
       if (option && typeof option === "object") {
-        return <span>{option.label}</span>;
+        const lbl = String(option.label ?? "");
+        if (lbl.trim().split(/\s+/).length > 2) {
+          return (
+            <div className="whitespace-pre-line text-sm leading-relaxed" dir="rtl">
+              {breakEveryWords(lbl, 2)}
+            </div>
+          );
+        }
+        return <span>{lbl}</span>;
       }
+    }
+    if (f.type === "file" || f.key === "attachment" || f.key === "file" || f.key === "attachment_url") {
+      const vStr = String(v ?? "").trim();
+      if (!vStr || vStr === "—") return <span className="text-muted-foreground text-xs">—</span>;
+
+      return (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleOpenFilePreview(row, f.key);
+          }}
+          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/10 hover:underline transition-colors"
+          title={`عرض ${vStr}`}
+        >
+          <Eye className="size-3.5 shrink-0" />
+          <span>عرض</span>
+        </button>
+      );
     }
     if (f.type === "progress")
       return (
@@ -246,11 +416,11 @@ export function CrudTable<T extends Row>({
       f.key === "details" ||
       f.key === "decision" ||
       f.key === "notes" ||
-      (typeof v === "string" && v.trim().split(/\s+/).length > 4 && !isUuid && !isIdField && f.type !== "mono")
+      (typeof v === "string" && v.trim().split(/\s+/).length > 2 && !isUuid && !isIdField && f.type !== "mono")
     ) {
       return (
         <div className="whitespace-pre-line text-sm leading-relaxed" dir="rtl">
-          {breakEveryWords(String(v), 4)}
+          {breakEveryWords(String(v), 2)}
         </div>
       );
     }
@@ -339,11 +509,12 @@ export function CrudTable<T extends Row>({
       )}
 
       {hydrated && (
-        <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] border-collapse text-right text-sm">
+        <>
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] border-collapse text-right text-sm">
           <thead>
             <tr className="border-b border-border">
-              {fields.map((f) => (
+              {visibleFields.map((f) => (
                 <th
                   key={f.key}
                   className="whitespace-nowrap px-3 py-2.5 text-xs font-semibold text-muted-foreground"
@@ -355,17 +526,17 @@ export function CrudTable<T extends Row>({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((row) => (
+            {paginatedRows.map((row) => (
               <tr
                 key={String(row[idKey])}
                 className={`border-b border-border/60 transition-colors last:border-0 hover:bg-secondary/60 ${onRowClick ? "cursor-pointer" : ""}`}
                 onClick={(e) => {
-                  if (onRowClick && !(e.target as HTMLElement).closest("button")) {
+                  if (onRowClick && !(e.target as HTMLElement).closest("button") && !(e.target as HTMLElement).closest("a")) {
                     onRowClick(row);
                   }
                 }}
               >
-                {fields.map((f) => (
+                {visibleFields.map((f) => (
                   <td
                     key={f.key}
                     className={`px-3 py-3 text-foreground ${
@@ -373,8 +544,11 @@ export function CrudTable<T extends Row>({
                       f.key === "description" ||
                       f.key === "details" ||
                       f.key === "decision" ||
-                      f.key === "notes"
-                        ? "whitespace-normal min-w-[200px] max-w-[340px]"
+                      f.key === "notes" ||
+                      f.key === "name" ||
+                      f.key === "repository_folder_id" ||
+                      f.key === "authority"
+                        ? "whitespace-normal min-w-[120px] max-w-[280px]"
                         : "whitespace-nowrap"
                     }`}
                   >
@@ -383,15 +557,37 @@ export function CrudTable<T extends Row>({
                 ))}
                 <td className="whitespace-nowrap px-3 py-3">
                   <div className="flex items-center gap-1.5">
+                    {(() => {
+                      const fileField = fields.find((f) => f.type === "file" && row[f.key]);
+                      if (!fileField || !row[fileField.key]) return null;
+                      
+                      return (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenFilePreview(row, fileField.key);
+                          }}
+                          aria-label="معاينة المرفق"
+                          title="معاينة المرفق"
+                          className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        >
+                          <Eye className="size-3.5" />
+                        </button>
+                      );
+                    })()}
                     <button
-                      onClick={() => openEdit(row)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEdit(row);
+                      }}
                       aria-label="تعديل"
                       className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
                     >
                       <Pencil className="size-3.5" />
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (window.confirm("هل تريد حذف هذا السجل؟")) remove(String(row[idKey]));
                       }}
                       aria-label="حذف"
@@ -406,7 +602,7 @@ export function CrudTable<T extends Row>({
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={fields.length + 1}
+                  colSpan={visibleFields.length + 1}
                   className="px-3 py-8 text-center text-sm text-muted-foreground"
                 >
                   لا توجد سجلات مطابقة.
@@ -416,6 +612,85 @@ export function CrudTable<T extends Row>({
           </tbody>
         </table>
       </div>
+
+      {filtered.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border/60 pt-4 mt-3 text-sm" dir="rtl">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>
+              عرض <span className="font-semibold text-foreground">{startIndex + 1}</span>–<span className="font-semibold text-foreground">{endIndex}</span> من إجمالي <span className="font-semibold text-foreground">{totalRows}</span>
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Rows per page selector */}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span>لكل صفحة:</span>
+              <select
+                value={pageSizeState}
+                onChange={(e) => {
+                  setPageSizeState(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring/40 cursor-pointer"
+              >
+                {[12, 24, 36, 48, 100].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  className="flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2.5 text-xs text-foreground outline-none hover:bg-secondary disabled:pointer-events-none disabled:opacity-40 transition-colors"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                  السابق
+                </button>
+
+                <div className="flex items-center gap-1 mx-1">
+                  {getPageNumbers().map((pNum, idx) =>
+                    typeof pNum === "number" ? (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setPage(pNum)}
+                        className={`h-8 min-w-[2rem] rounded-md px-2 text-xs font-medium transition-colors ${
+                          safePage === pNum
+                            ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                            : "border border-border bg-background text-foreground hover:bg-secondary"
+                        }`}
+                      >
+                        {pNum}
+                      </button>
+                    ) : (
+                      <span key={idx} className="px-1 text-xs text-muted-foreground">
+                        {pNum}
+                      </span>
+                    )
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  className="flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2.5 text-xs text-foreground outline-none hover:bg-secondary disabled:pointer-events-none disabled:opacity-40 transition-colors"
+                >
+                  التالي
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      </>
       )}
 
       {open ? (
@@ -493,26 +768,65 @@ export function CrudTable<T extends Row>({
                         className="min-h-[80px] w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
                       />
                     ) : f.type === "file" ? (
-                      <div>
-                        <input
-                          type="file"
-                          accept={f.accept}
-                          multiple
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files || []);
-                            setFileUploads({ ...fileUploads, [f.key]: files });
-                            setDraft({ ...draft, [f.key]: files.map((file) => file.name).join("، ") });
-                          }}
-                          className="h-10 w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm outline-none file:ml-4 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-primary hover:file:bg-primary/20 focus:ring-2 focus:ring-ring/40"
-                        />
-                        {f.accept && (
-                          <p className="mt-1.5 text-[11px] text-muted-foreground">
-                            الملفات المسموحة:{" "}
-                            <span className="font-mono opacity-80" dir="ltr">
-                              {f.accept.replace(/\./g, "").replace(/,/g, ", ")}
-                            </span>
-                          </p>
-                        )}
+                      <div className="space-y-2">
+                        {draft[f.key] ? (
+                          <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <FileText className="size-4 shrink-0 text-primary" />
+                              <span className="truncate text-xs font-medium text-foreground" title={String(draft[f.key])}>
+                                {String(draft[f.key])}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenFilePreview(draft, f.key)}
+                                className="flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs text-primary hover:bg-secondary transition-colors"
+                              >
+                                <Eye className="size-3.5" />
+                                معاينة
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updatedDraft = { ...draft };
+                                  delete updatedDraft[f.key];
+                                  delete (updatedDraft as any).file_url;
+                                  setDraft(updatedDraft);
+                                  const updatedUploads = { ...fileUploads };
+                                  delete updatedUploads[f.key];
+                                  setFileUploads(updatedUploads);
+                                }}
+                                title="حذف المرفق"
+                                className="rounded-md border border-border bg-background p-1 text-destructive hover:bg-destructive/10 transition-colors"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        <div>
+                          <input
+                            type="file"
+                            accept={f.accept}
+                            multiple
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files || []);
+                              setFileUploads({ ...fileUploads, [f.key]: files });
+                              setDraft({ ...draft, [f.key]: files.map((file) => file.name).join("، ") });
+                            }}
+                            className="h-10 w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm outline-none file:ml-4 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-primary hover:file:bg-primary/20 focus:ring-2 focus:ring-ring/40"
+                          />
+                          {f.accept && (
+                            <p className="mt-1.5 text-[11px] text-muted-foreground">
+                              الملفات المسموحة:{" "}
+                              <span className="font-mono opacity-80" dir="ltr">
+                                {f.accept.replace(/\./g, "").replace(/,/g, ", ")}
+                              </span>
+                            </p>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <input
@@ -556,6 +870,89 @@ export function CrudTable<T extends Row>({
               >
                 {saving ? "جاري الحفظ..." : "حفظ"}
               </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {previewData ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
+          onClick={() => setPreviewData(null)}
+        >
+          <div
+            className="relative w-full max-w-4xl rounded-xl border border-border bg-card p-4 shadow-lg min-h-[50vh] max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+            dir="rtl"
+          >
+            <div className="flex items-center justify-between border-b border-border/60 pb-3 mb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="size-5 text-primary" />
+                <h3 className="font-display text-base font-bold text-card-foreground">
+                  معاينة المرفق: <span className="font-normal text-muted-foreground">{previewData.name}</span>
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                {previewData.url && (
+                  <a
+                    href={previewData.url}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                    aria-label="تحميل"
+                    title="تحميل الملف"
+                  >
+                    <Download className="size-4" />
+                  </a>
+                )}
+                <button
+                  onClick={() => setPreviewData(null)}
+                  className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                  aria-label="إغلاق"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 w-full bg-secondary/20 rounded-lg overflow-hidden relative flex flex-col items-center justify-center min-h-[350px]">
+              {previewData.url ? (
+                <iframe
+                  src={previewData.url}
+                  className="w-full h-full min-h-[500px] border-0 rounded-lg"
+                  title={previewData.name}
+                />
+              ) : (
+                <div className="p-8 text-center max-w-md space-y-4">
+                  <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <FileText className="size-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-base font-bold text-foreground">{previewData.name}</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      اسم الملف مسجل في النظام، ولكن لم يتم رفع الملف الرقمي الفعلي إلى مساحة التخزين السحابية بعد.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3 text-xs text-muted-foreground text-right leading-relaxed">
+                    💡 <strong className="text-foreground">لرفع الملف الفعلي:</strong> يمكنك تعديل السجل واختيار الملف من جهازك ليتم حفظه وربطه فوراً.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const rowToEdit = previewData.row || items.find(it => String(it["attachment"] || it["name"] || '') === previewData.name);
+                      setPreviewData(null);
+                      if (rowToEdit) {
+                        openEdit(rowToEdit);
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+                  >
+                    <Upload className="size-3.5" />
+                    رفع الملف لهذا السجل الآن
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

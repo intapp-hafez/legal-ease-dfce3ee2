@@ -180,6 +180,8 @@ export type ArchiveNode = {
   version?: string;
   status?: "Active" | "Expired" | "Archived";
   confidentiality?: "Normal" | "Confidential" | "Highly Confidential";
+  file_url?: string;
+  parent_id?: string | null;
   shared_with?: string[];
   shared_departments?: string[];
   children?: ArchiveNode[];

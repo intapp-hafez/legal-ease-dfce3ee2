@@ -5,6 +5,7 @@ import { PageShell, Panel } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { SearchSelect } from "@/components/legal/SearchSelect";
 import { useDocumentCategories } from "@/lib/document-categories";
+import { useDocumentAuthorities } from "@/lib/document-authorities";
 import { useProfilesOptions } from "@/lib/useSupabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -27,8 +28,10 @@ export const Route = createFileRoute("/documents")({
 });
 
 function DocumentsPage() {
-  const [filter, setFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [authorityFilter, setAuthorityFilter] = useState("");
   const { options: categories, add: addCategory } = useDocumentCategories();
+  const { options: authorities, add: addAuthority } = useDocumentAuthorities();
   const profilesOptions = useProfilesOptions();
 
   const queryClient = useQueryClient();
@@ -39,7 +42,7 @@ function DocumentsPage() {
       const { data, error } = await supabase
         .from("repository")
         .select("id, name")
-        .eq("type", "folder")
+        .eq("type", "folder");
       if (error) return [];
       return data.map((d: any) => ({ value: d.id, label: d.name }));
     },
@@ -54,6 +57,8 @@ function DocumentsPage() {
       });
   };
 
+  const hasFilters = Boolean(categoryFilter || authorityFilter);
+
   return (
     <PageShell
       title="مستندات الشركة القانونية"
@@ -61,22 +66,34 @@ function DocumentsPage() {
     >
       <div className="space-y-5">
         <Panel title="تصفية المستندات">
-          <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+          <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto]">
             <SearchSelect
               label="التصنيف"
               allLabel="كل التصنيفات"
-              value={filter}
-              onChange={setFilter}
+              value={categoryFilter}
+              onChange={setCategoryFilter}
               options={categories}
               onAddOption={addCategory}
               addLabel="إضافة تصنيف جديد"
             />
+            <SearchSelect
+              label="الجهة المُصدِرة"
+              allLabel="كل الجهات المُصدِرة"
+              value={authorityFilter}
+              onChange={setAuthorityFilter}
+              options={authorities}
+              onAddOption={addAuthority}
+              addLabel="إضافة جهة جديدة"
+            />
             <div className="flex items-end">
               <button
                 type="button"
-                disabled={!filter}
-                onClick={() => setFilter("")}
-                className="flex h-10 items-center gap-2 rounded-lg border border-border bg-background px-3 text-sm outline-none hover:bg-muted focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
+                disabled={!hasFilters}
+                onClick={() => {
+                  setCategoryFilter("");
+                  setAuthorityFilter("");
+                }}
+                className="flex h-10 items-center gap-2 rounded-lg border border-border bg-background px-3 text-sm outline-none hover:bg-muted focus:ring-2 focus:ring-ring/40 disabled:opacity-50 transition-colors"
               >
                 <RotateCcw className="h-4 w-4" />
                 تصفير التصفية
@@ -86,7 +103,8 @@ function DocumentsPage() {
         </Panel>
 
         <CrudTable
-          filters={{ category: filter }}
+          pageSize={12}
+          filters={{ category: categoryFilter, authority: authorityFilter }}
           title="سجل المستندات"
           subtitle="رقم المستند، الجهة المُصدِرة، تواريخ الإصدار والانتهاء"
           addLabel="مستند جديد"
@@ -107,11 +125,18 @@ function DocumentsPage() {
               addLabel: "إضافة تصنيف جديد",
               required: true,
             },
-            { key: "authority", label: "الجهة المُصدِرة" },
+            {
+              key: "authority",
+              label: "الجهة المُصدِرة",
+              type: "select",
+              options: authorities,
+              onAddOption: addAuthority,
+              addLabel: "إضافة جهة جديدة",
+            },
             { key: "issue_date", label: "الإصدار", type: "date" },
             { key: "expiry_date", label: "الانتهاء", type: "date" },
-            { key: "remind_days", label: "التذكير (يوم)", type: "number" },
-            { key: "owner_id", label: "المسؤول", type: "select", options: profilesOptions },
+            { key: "remind_days", label: "التذكير (يوم)", type: "number", hideInTable: true },
+            { key: "owner_id", label: "المسؤول", type: "select", options: profilesOptions, hideInTable: true },
             {
               key: "status",
               label: "الحالة",
