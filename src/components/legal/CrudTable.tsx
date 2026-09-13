@@ -86,8 +86,17 @@ export function CrudTable<T extends Row>({
 }: Props<T>) {
   const { user } = useAuth();
 
+  const selectQuery = useMemo(() => {
+    if (!tableName) return "*";
+    const keys = fields.map((f) => f.key);
+    const allKeys = [idKey, "created_at", "updated_at", "repository_folder_id", "file_url", ...keys].filter(
+      (v, i, a) => a.indexOf(v) === i && v !== "file_data"
+    );
+    return allKeys.join(",");
+  }, [tableName, fields, idKey]);
+
   const localDb = useCollection<T>(storageKey, seed, idKey);
-  const supabaseDb = useSupabaseCollection<T>(tableName || "", idKey as keyof T);
+  const supabaseDb = useSupabaseCollection<T>(tableName || "", idKey as keyof T, selectQuery);
   const db = tableName ? supabaseDb : localDb;
   
   const { items, create, update, remove, reset, replaceAll, hydrated } = db;
@@ -110,6 +119,14 @@ export function CrudTable<T extends Row>({
 
     let url = (row as any).file_url || null;
     let repoDoc: any = null;
+
+    // Fetch file_data if it's not present but file_url is missing
+    if (!url && tableName) {
+      const { data } = await supabase.from(tableName).select("file_data").eq(idKey as string, row[idKey]).single();
+      if (data?.file_data) {
+        url = data.file_data;
+      }
+    }
 
     // 1. Search the repository table
     if (!url) {
@@ -312,11 +329,21 @@ export function CrudTable<T extends Row>({
         if (files && files.length > 0) {
           const file = files[0];
           if (!file) continue;
-          const path = `uploads/${Date.now()}_${file.name}`;
-          const { data, error } = await supabase.storage.from("legal_documents").upload(path, file);
-          if (!error && data) {
-            const { data: publicUrlData } = supabase.storage.from("legal_documents").getPublicUrl(path);
-            (value as any).file_url = publicUrlData.publicUrl;
+          
+          try {
+            const base64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(file);
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = error => reject(error);
+            });
+            // Set file_data for saving directly to DB
+            (value as any).file_data = base64;
+            (value as any).file_url = base64;
+            // Also ensure the attachment field gets the filename
+            (value as any)[key] = file.name;
+          } catch (e) {
+            console.error("Failed to read file as base64", e);
           }
         }
       }

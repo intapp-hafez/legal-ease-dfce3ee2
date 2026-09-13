@@ -3,7 +3,7 @@ import { supabase } from "./supabase";
 import { useMemo } from "react";
 import { useCollection, type Row } from "./crud";
 
-export function useSupabaseCollection<T extends Row>(tableName: string, idKey: keyof T = "id" as keyof T) {
+export function useSupabaseCollection<T extends Row>(tableName: string, idKey: keyof T = "id" as keyof T, selectQuery: string = "*") {
   const queryClient = useQueryClient();
   const localDb = useCollection<T>(`supabase_backup_${tableName}`, [], idKey);
 
@@ -12,7 +12,7 @@ export function useSupabaseCollection<T extends Row>(tableName: string, idKey: k
     queryKey: [tableName],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from(tableName).select("*").order("created_at", { ascending: false });
+        const { data, error } = await supabase.from(tableName).select(selectQuery).order("created_at", { ascending: false });
         if (error) {
           console.warn(`Fetch error for ${tableName}:`, error.message);
           return null;
