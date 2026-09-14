@@ -120,11 +120,26 @@ export function CrudTable<T extends Row>({
     let url = (row as any).file_url || null;
     let repoDoc: any = null;
 
+    // Check if in draft preview with newly uploaded file
+    if (!url && fileUploads[fieldKey]?.[0]) {
+      try {
+        url = URL.createObjectURL(fileUploads[fieldKey][0]);
+      } catch {}
+    }
+
     // Fetch file_data if it's not present but file_url is missing
     if (!url && tableName) {
-      const { data } = await supabase.from(tableName).select("file_data").eq(idKey as string, row[idKey]).single();
-      if (data?.file_data) {
-        url = data.file_data;
+      try {
+        const { data } = await supabase
+          .from(tableName)
+          .select("file_data")
+          .eq(String(idKey), row[idKey])
+          .maybeSingle();
+        if (data?.file_data) {
+          url = data.file_data;
+        }
+      } catch (err) {
+        console.warn("Failed to fetch file_data from DB:", err);
       }
     }
 
@@ -206,7 +221,10 @@ export function CrudTable<T extends Row>({
         const testLocalUrl = `/documents/${encodeURIComponent(fileName)}`;
         const res = await fetch(testLocalUrl, { method: "HEAD" });
         if (res.ok) {
-          url = testLocalUrl;
+          const contentType = res.headers.get("content-type");
+          if (!contentType || !contentType.includes("text/html")) {
+            url = testLocalUrl;
+          }
         }
       } catch {}
     }
@@ -217,6 +235,47 @@ export function CrudTable<T extends Row>({
       isPlaceholder: !url,
       row,
     });
+  }
+
+  function handleDownloadFile(name: string, url: string) {
+    try {
+      if (url.startsWith("data:")) {
+        const parts = url.split(";base64,");
+        const contentType = (parts[0] ? parts[0].replace("data:", "") : "") || "application/octet-stream";
+        const base64Data = parts[1] || "";
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Uint8Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const blob = new Blob([byteNumbers], { type: contentType });
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        toast.success("بدأ تحميل الملف");
+      } else {
+        const downloadUrl = url.includes("supabase.co") && !url.includes("download=")
+          ? url + (url.includes("?") ? "&" : "?") + "download=" + encodeURIComponent(name)
+          : url;
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.download = name;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("بدأ تحميل الملف");
+      }
+    } catch (err: any) {
+      console.error("Download error:", err);
+      toast.error("فشل تحميل الملف: " + (err.message || ""));
+    }
   }
 
   useEffect(() => {
@@ -305,7 +364,10 @@ export function CrudTable<T extends Row>({
 
   function openEdit(row: T) {
     setEditingId(String(row[idKey]));
-    setDraft({ ...row });
+    const newDraft = { ...row };
+    // Do not include huge file_data payload when editing to prevent Payload Too Large errors
+    delete (newDraft as any).file_data;
+    setDraft(newDraft);
     setFileUploads({});
     setError(null);
     setOpen(true);
@@ -339,17 +401,24 @@ export function CrudTable<T extends Row>({
             });
             // Set file_data for saving directly to DB
             (value as any).file_data = base64;
-            (value as any).file_url = base64;
-            // Also ensure the attachment field gets the filename
+            // Also ensure the attachment and key fields get the filename
             (value as any)[key] = file.name;
+            (value as any).attachment = file.name;
+            // Avoid duplicating base64 into file_url to prevent 2x payload blowup
+            if ((value as any).file_url && (value as any).file_url.startsWith("data:")) {
+              delete (value as any).file_url;
+            }
           } catch (e) {
             console.error("Failed to read file as base64", e);
+            throw new Error("فشل قراءة الملف المرفق");
           }
         }
       }
 
-      if (editingId) update(editingId, value);
-      else {
+      if (editingId) {
+        await update(editingId, value);
+        toast.success("تم تحديث السجل بنجاح");
+      } else {
         if (items.some((it) => String(it[idKey]) === String(value[idKey]))) {
           setError("المعرّف مستخدم بالفعل");
           setSaving(false);
@@ -358,11 +427,15 @@ export function CrudTable<T extends Row>({
         if (tableName && idKey === "id") {
           delete (value as any).id;
         }
-        create(value);
+        await create(value);
+        toast.success("تمت إضافة السجل بنجاح");
       }
       setOpen(false);
     } catch (err: any) {
-      setError(err.message || "حدث خطأ أثناء الحفظ");
+      console.error("Save error:", err);
+      const msg = err.message || "حدث خطأ أثناء الحفظ";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -817,8 +890,10 @@ export function CrudTable<T extends Row>({
                                 type="button"
                                 onClick={() => {
                                   const updatedDraft = { ...draft };
-                                  delete updatedDraft[f.key];
-                                  delete (updatedDraft as any).file_url;
+                                  // Set to null to explicitly clear from DB instead of just removing the key
+                                  (updatedDraft as any)[f.key] = null;
+                                  (updatedDraft as any).file_url = null;
+                                  (updatedDraft as any).file_data = null;
                                   setDraft(updatedDraft);
                                   const updatedUploads = { ...fileUploads };
                                   delete updatedUploads[f.key];
@@ -840,6 +915,15 @@ export function CrudTable<T extends Row>({
                             multiple
                             onChange={(e) => {
                               const files = Array.from(e.target.files || []);
+                              if (files.length === 0) return;
+                              const oversized = files.find(file => file.size > 10 * 1024 * 1024);
+                              if (oversized) {
+                                toast.error(`عذراً، حجم الملف «${oversized.name}» يتجاوز الحد المسموح به (10 ميجابايت).`);
+                                setError(`عذراً، حجم الملف «${oversized.name}» يتجاوز الحد المسموح به (10 ميجابايت).`);
+                                e.target.value = '';
+                                return;
+                              }
+                              setError(null);
                               setFileUploads({ ...fileUploads, [f.key]: files });
                               setDraft({ ...draft, [f.key]: files.map((file) => file.name).join("، ") });
                             }}
@@ -921,17 +1005,16 @@ export function CrudTable<T extends Row>({
               </div>
               <div className="flex items-center gap-2">
                 {previewData.url && (
-                  <a
-                    href={previewData.url}
-                    download
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadFile(previewData.name, previewData.url!)}
+                    className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                     aria-label="تحميل"
                     title="تحميل الملف"
                   >
-                    <Download className="size-4" />
-                  </a>
+                    <Download className="size-3.5" />
+                    <span>تحميل</span>
+                  </button>
                 )}
                 <button
                   onClick={() => setPreviewData(null)}

@@ -94,10 +94,28 @@ export function DocumentUploadModal({
     }, 1500);
   };
 
+  const handleFilesSelection = (selectedFiles: File[]) => {
+    const validFiles: File[] = [];
+
+    selectedFiles.forEach((file) => {
+      if (file.type !== "application/pdf") {
+        toast.error(`الملف ${file.name} ليس بصيغة PDF. يسمح فقط برفع ملفات PDF.`);
+      } else if (file.size > 10 * 1024 * 1024) {
+        toast.error(`حجم الملف ${file.name} يتجاوز الحد المسموح به (10 ميجابايت).`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (validFiles.length > 0) {
+      setFiles(validFiles);
+    }
+  };
+
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
     if (e.dataTransfer.files) {
-      setFiles(Array.from(e.dataTransfer.files));
+      handleFilesSelection(Array.from(e.dataTransfer.files));
     }
   };
 
@@ -124,13 +142,14 @@ export function DocumentUploadModal({
               >
                 <UploadCloud className="mb-2 size-8 text-muted-foreground" />
                 <p className="text-sm font-medium text-foreground">اختر الملفات أو اسحبها هنا</p>
-                <p className="mt-1 text-xs text-muted-foreground">يدعم PDF, Word, Excel, صور</p>
+                <p className="mt-1 text-xs text-muted-foreground">يسمح برفع ملفات PDF فقط (الحد الأقصى 10 ميجابايت)</p>
                 <input
                   id="file-upload"
                   type="file"
                   multiple
+                  accept=".pdf,application/pdf"
                   className="hidden"
-                  onChange={(e) => setFiles(Array.from(e.target.files || []))}
+                  onChange={(e) => handleFilesSelection(Array.from(e.target.files || []))}
                 />
               </div>
 

@@ -104,7 +104,7 @@ function RepositoryPage() {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [previewData, setPreviewData] = useState<{ name: string; url: string | null; isPlaceholder?: boolean } | null>(null);
 
-  const handleOpenFilePreview = async (node: ArchiveNode) => {
+  const getFileUrl = async (node: ArchiveNode) => {
     let url = node.file_url || null;
     const fileName = node.name;
 
@@ -141,16 +141,51 @@ function RepositoryPage() {
         const testLocalUrl = `/documents/${encodeURIComponent(fileName)}`;
         const res = await fetch(testLocalUrl, { method: "HEAD" });
         if (res.ok) {
-          url = testLocalUrl;
+          const contentType = res.headers.get("content-type");
+          if (!contentType || !contentType.includes("text/html")) {
+            url = testLocalUrl;
+          }
         }
       } catch {}
     }
 
+    return url;
+  };
+
+  const handleOpenFilePreview = async (node: ArchiveNode) => {
+    const url = await getFileUrl(node);
     setPreviewData({
-      name: fileName,
+      name: node.name,
       url: url,
       isPlaceholder: !url,
     });
+  };
+
+  const handleDownloadFile = async (e: React.MouseEvent, node: ArchiveNode) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    toast.info("جاري تجهيز الملف...");
+    const url = await getFileUrl(node);
+    
+    if (url) {
+      let finalUrl = url;
+      
+      // For Supabase Storage URLs, append the download parameter to force a Content-Disposition: attachment response.
+      // This bypasses the need for CORS-enabled fetch and guarantees a download rather than navigation.
+      if (url.includes("supabase.co") && !url.includes("download=")) {
+        finalUrl = url + (url.includes("?") ? "&" : "?") + "download=" + encodeURIComponent(node.name);
+      }
+
+      const a = document.createElement("a");
+      a.href = finalUrl;
+      a.download = node.name; // Works for same-origin (local) files
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      toast.error("عذراً، الملف غير متوفر.");
+    }
   };
 
   // Filters state
@@ -563,52 +598,62 @@ function RepositoryPage() {
                       )}
                     </div>
                     
-                    {canEdit && (
-                      <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        {node.type === "folder" && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleRenameClick(e, node);
-                              }}
-                              className="rounded-md p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                              title="إعادة تسمية"
-                            >
-                              <Pencil className="size-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleShareClick(e, node);
-                              }}
-                              className="rounded-md p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                              title="مشاركة"
-                            >
-                              <Share2 className="size-4" />
-                            </button>
-                          </>
-                        )}
-                        {isSuperAdmin && (
+                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      {canEdit && node.type === "folder" && (
+                        <>
                           <button
                             type="button"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              handleDeleteClick(e, node);
+                              handleRenameClick(e, node);
                             }}
-                            className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                            title="حذف"
+                            className="rounded-md p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                            title="إعادة تسمية"
                           >
-                            <Trash2 className="size-4" />
+                            <Pencil className="size-4" />
                           </button>
-                        )}
-                      </div>
-                    )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleShareClick(e, node);
+                            }}
+                            className="rounded-md p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                            title="مشاركة"
+                          >
+                            <Share2 className="size-4" />
+                          </button>
+                        </>
+                      )}
+                      
+                      {node.type === "file" && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleDownloadFile(e, node)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                          title="تحميل"
+                        >
+                          <Download className="size-4" />
+                        </button>
+                      )}
+
+                      {canEdit && isSuperAdmin && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDeleteClick(e, node);
+                          }}
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                          title="حذف"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <h3 className="mb-1 truncate text-sm font-semibold text-card-foreground w-full" title={node.name}>
                     {node.name}

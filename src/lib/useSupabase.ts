@@ -17,7 +17,7 @@ export function useSupabaseCollection<T extends Row>(tableName: string, idKey: k
           console.warn(`Fetch error for ${tableName}:`, error.message);
           return null;
         }
-        return (data || []) as T[];
+        return (data || []) as unknown as T[];
       } catch (err) {
         console.warn(`Fetch exception for ${tableName}:`, err);
         return null;
@@ -55,19 +55,17 @@ export function useSupabaseCollection<T extends Row>(tableName: string, idKey: k
   const createMutation = useMutation({
     mutationFn: async (row: T) => {
       const payload = cleanPayload(row);
-      try {
-        const { data, error } = await supabase.from(tableName).insert([payload]).select().single();
-        if (error) {
-          console.warn(`Supabase insert error in ${tableName}, saving locally:`, error.message);
-          localDb.create(row);
-          return row;
-        }
-        return data as T;
-      } catch (err) {
-        console.warn(`Insert exception in ${tableName}, saving locally:`, err);
-        localDb.create(row);
-        return row;
+      const { data, error } = await supabase
+        .from(tableName)
+        .insert([payload])
+        .select(selectQuery)
+        .single();
+
+      if (error) {
+        console.error(`Supabase insert error in ${tableName}:`, error.message);
+        throw error;
       }
+      return data as T;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [tableName] }),
   });
@@ -76,25 +74,18 @@ export function useSupabaseCollection<T extends Row>(tableName: string, idKey: k
   const updateMutation = useMutation({
     mutationFn: async ({ id, row }: { id: string | number; row: Partial<T> }) => {
       const payload = cleanPayload(row);
-      try {
-        const { data, error } = await supabase
-          .from(tableName)
-          .update(payload)
-          .eq(String(idKey), id)
-          .select()
-          .single();
+      const { data, error } = await supabase
+        .from(tableName)
+        .update(payload)
+        .eq(String(idKey), id)
+        .select(selectQuery)
+        .single();
           
-        if (error) {
-          console.warn(`Update error in ${tableName}, saving locally:`, error.message);
-          localDb.update(id, row as T);
-          return row as T;
-        }
-        return data as T;
-      } catch (err) {
-        console.warn(`Update exception in ${tableName}, saving locally:`, err);
-        localDb.update(id, row as T);
-        return row as T;
+      if (error) {
+        console.error(`Update error in ${tableName}:`, error.message);
+        throw error;
       }
+      return data as T;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [tableName] }),
   });
@@ -103,10 +94,10 @@ export function useSupabaseCollection<T extends Row>(tableName: string, idKey: k
   const removeMutation = useMutation({
     mutationFn: async (id: string | number) => {
       localDb.remove(id);
-      try {
-        await supabase.from(tableName).delete().eq(String(idKey), id);
-      } catch (err) {
-        console.warn(`Delete error in ${tableName}:`, err);
+      const { error } = await supabase.from(tableName).delete().eq(String(idKey), id);
+      if (error) {
+        console.error(`Delete error in ${tableName}:`, error.message);
+        throw error;
       }
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [tableName] }),
@@ -118,11 +109,11 @@ export function useSupabaseCollection<T extends Row>(tableName: string, idKey: k
       localDb.replaceAll(rows);
       try {
         const payload = rows.map((r) => cleanPayload(r));
-        const { data, error } = await supabase.from(tableName).upsert(payload as any, { onConflict: idKey as string }).select();
+        const { data, error } = await supabase.from(tableName).upsert(payload as any, { onConflict: idKey as string }).select(selectQuery);
         if (error) throw error;
         return data as T[];
       } catch (err: any) {
-        console.warn(`Bulk replace error in ${tableName}, saving locally:`, err.message || err);
+        console.warn(`Bulk replace error in ${tableName}:`, err.message || err);
         return rows;
       }
     },
@@ -132,10 +123,10 @@ export function useSupabaseCollection<T extends Row>(tableName: string, idKey: k
   return {
     items,
     hydrated: !isLoading || localDb.hydrated,
-    create: createMutation.mutate,
-    update: (id: string | number, row: T) => updateMutation.mutate({ id, row }),
-    remove: removeMutation.mutate,
-    replaceAll: replaceAllMutation.mutate,
+    create: (row: T) => createMutation.mutateAsync(row),
+    update: (id: string | number, row: T) => updateMutation.mutateAsync({ id, row }),
+    remove: (id: string | number) => removeMutation.mutateAsync(id),
+    replaceAll: (rows: T[]) => replaceAllMutation.mutateAsync(rows),
     reset: localDb.reset,
   };
 }
