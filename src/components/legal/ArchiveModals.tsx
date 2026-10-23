@@ -234,44 +234,54 @@ export function DocumentUploadModal({
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-muted-foreground">القسم المختص</label>
-            <select value={department} onChange={(e) => setDepartment(e.target.value)} className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none">
-              <option value="">اختر القسم...</option>
-              <option value="الموارد البشرية">الموارد البشرية</option>
-              <option value="المالية">المالية</option>
-              <option value="الشؤون القانونية">الشؤون القانونية</option>
-            </select>
+            <SearchSelect
+              label=""
+              allLabel="اختر القسم..."
+              value={department}
+              onChange={setDepartment}
+              options={departments}
+              onAddOption={addDepartment}
+              addLabel="إضافة قسم جديد"
+            />
           </div>
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-muted-foreground">تصنيف المستند</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none">
-              <option value="">اختر التصنيف...</option>
-              <option value="عام">عام</option>
-              <option value="سري">سري</option>
-              <option value="سري للغاية">سري للغاية</option>
-            </select>
+            <SearchSelect
+              label=""
+              allLabel="اختر التصنيف..."
+              value={category}
+              onChange={setCategory}
+              options={categories}
+              onAddOption={addCategory}
+              addLabel="إضافة تصنيف جديد"
+            />
           </div>
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-muted-foreground">نوع الملف</label>
-            <select value={fileType} onChange={(e) => setFileType(e.target.value)} className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none">
-              <option value="">اختر النوع...</option>
-              <option value="عقد">عقد</option>
-              <option value="رخصة">رخصة</option>
-              <option value="تقرير">تقرير</option>
-            </select>
+            <SearchSelect
+              label=""
+              allLabel="اختر النوع..."
+              value={fileType}
+              onChange={setFileType}
+              options={fileTypes}
+              onAddOption={addFileType}
+              addLabel="إضافة نوع جديد"
+            />
           </div>
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-muted-foreground">حفظ في المجلد</label>
-            <select value={selectedFolder} onChange={(e) => setSelectedFolder(e.target.value)} className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all">
-              <option value="">اختر المجلد الوجهة...</option>
-              <option value="الرئيسية">الرئيسية</option>
-              <option value="عقود الموظفين">عقود الموظفين</option>
-              <option value="ملفات القضايا">ملفات القضايا</option>
-              <option value="الرخص والسجلات">الرخص والسجلات</option>
-              <option value="القرارات الإدارية">القرارات الإدارية</option>
-            </select>
+            <SearchSelect
+              label=""
+              allLabel="اختر المجلد الوجهة..."
+              value={selectedFolder}
+              onChange={setSelectedFolder}
+              options={folderOptions}
+              onAddOption={addFolder}
+              addLabel="إضافة مجلد جديد"
+            />
           </div>
 
           {user?.role !== "employee" && (
