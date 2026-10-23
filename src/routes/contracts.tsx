@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { useOptionList } from "@/lib/option-lists";
 import { PageShell, Panel } from "@/components/legal/PageShell";
 import { CrudTable } from "@/components/legal/CrudTable";
 import { contractWorkflow } from "@/lib/legal-data";
@@ -32,6 +33,7 @@ function ContractsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const profilesOptions = useProfilesOptions();
+  const { options: contractTypes, add: addContractType } = useOptionList("contract-types", ["توظيف"]);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -187,7 +189,7 @@ function ContractsPage() {
                   required: true,
                   render: (val: any) => <EmployeeCell employeeId={val} />,
                 },
-                { key: "type", label: "النوع", type: "select", options: ["توظيف"], hideInForm: true },
+                { key: "type", label: "النوع", type: "select", options: contractTypes, onAddOption: addContractType, addLabel: "إضافة نوع عقد جديد" },
                 { key: "start_date", label: "البداية", type: "date" },
                 { key: "end_date", label: "النهاية", type: "date" },
                 { key: "salary", label: "الراتب", type: "number" },
