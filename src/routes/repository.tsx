@@ -1,5 +1,10 @@
 import { useState, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { SearchSelect } from "@/components/legal/SearchSelect";
+import {
+  useRepositoryDepartments,
+  useRepositoryFileTypes,
+} from "@/lib/repository-options";
 import { ArchiveLayout } from "@/components/legal/ArchiveLayout";
 import { type ArchiveNode } from "@/lib/legal-data";
 import { CreateFolderModal, DocumentUploadModal, ArchiveSettingsModal } from "@/components/legal/ArchiveModals";
@@ -40,6 +45,8 @@ function RepositoryPage() {
   const canEdit = can("repository", "edit");
   const isSuperAdmin = user?.role === "super_admin";
   const queryClient = useQueryClient();
+  const { options: departments, add: addDepartment } = useRepositoryDepartments();
+  const { options: fileTypes, add: addFileType } = useRepositoryFileTypes();
 
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [selectedFolderForShare, setSelectedFolderForShare] = useState<{ id: string, name: string, shared_with: string[], shared_departments: string[] } | null>(null);
