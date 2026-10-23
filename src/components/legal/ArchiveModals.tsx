@@ -1,5 +1,13 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { SearchSelect } from "@/components/legal/SearchSelect";
+import {
+  useRepositoryDepartments,
+  useRepositoryCategories,
+  useRepositoryFileTypes,
+} from "@/lib/repository-options";
 import { X, UploadCloud, FolderPlus, File as FileIcon, Scan, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -82,6 +90,30 @@ export function DocumentUploadModal({
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { options: departments, add: addDepartment } = useRepositoryDepartments();
+  const { options: categories, add: addCategory } = useRepositoryCategories();
+  const { options: fileTypes, add: addFileType } = useRepositoryFileTypes();
+  const { data: folderRows = [] } = useQuery({
+    queryKey: ["repository-folders-options"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("repository").select("id, name").eq("type", "folder");
+      if (error) return [];
+      return data as { id: string; name: string }[];
+    },
+  });
+  const folderOptions = folderRows.map((f) => f.name);
+  const addFolder = (name: string) => {
+    supabase.from("repository").insert({ name, type: "folder", parent_id: null }).then(({ error }) => {
+      if (error) {
+        toast.error("تعذر إنشاء المجلد");
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ["repository-folders-options"] });
+      queryClient.invalidateQueries({ queryKey: ["repository"] });
+    });
+    return null;
+  };
 
   if (!open) return null;
 
