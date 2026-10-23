@@ -1,5 +1,10 @@
 import { useState, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { SearchSelect } from "@/components/legal/SearchSelect";
+import {
+  useRepositoryDepartments,
+  useRepositoryFileTypes,
+} from "@/lib/repository-options";
 import { ArchiveLayout } from "@/components/legal/ArchiveLayout";
 import { type ArchiveNode } from "@/lib/legal-data";
 import { CreateFolderModal, DocumentUploadModal, ArchiveSettingsModal } from "@/components/legal/ArchiveModals";
@@ -40,6 +45,8 @@ function RepositoryPage() {
   const canEdit = can("repository", "edit");
   const isSuperAdmin = user?.role === "super_admin";
   const queryClient = useQueryClient();
+  const { options: departments, add: addDepartment } = useRepositoryDepartments();
+  const { options: fileTypes, add: addFileType } = useRepositoryFileTypes();
 
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [selectedFolderForShare, setSelectedFolderForShare] = useState<{ id: string, name: string, shared_with: string[], shared_departments: string[] } | null>(null);
@@ -518,18 +525,28 @@ function RepositoryPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <select value={filterFileType} onChange={e => setFilterFileType(e.target.value)} className="h-9 rounded border border-border bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
-                <option value="">كل الأنواع</option>
-                <option value="PDF">PDF</option>
-                <option value="Image">صورة</option>
-                <option value="عقد">عقد</option>
-              </select>
-              <select value={filterDepartment} onChange={e => setFilterDepartment(e.target.value)} className="h-9 rounded border border-border bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
-                <option value="">كل الأقسام</option>
-                <option value="الموارد البشرية">الموارد البشرية</option>
-                <option value="المالية">المالية</option>
-                <option value="الشؤون القانونية">الشؤون القانونية</option>
-              </select>
+              <div className="w-36">
+                <SearchSelect
+                  label=""
+                  allLabel="كل الأنواع"
+                  value={filterFileType}
+                  onChange={setFilterFileType}
+                  options={fileTypes}
+                  onAddOption={addFileType}
+                  addLabel="إضافة نوع جديد"
+                />
+              </div>
+              <div className="w-36">
+                <SearchSelect
+                  label=""
+                  allLabel="كل الأقسام"
+                  value={filterDepartment}
+                  onChange={setFilterDepartment}
+                  options={departments}
+                  onAddOption={addDepartment}
+                  addLabel="إضافة قسم جديد"
+                />
+              </div>
 
               <div className="relative">
                 <Search className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

@@ -88,7 +88,7 @@ function CustodyPage() {
           fields={[
             { key: "code", label: "كود الأصل", type: "mono", required: true },
             { key: "name", label: "الاسم", required: true },
-            { key: "category", label: "الفئة", type: "select", options: categories },
+            { key: "category", label: "الفئة", type: "select", options: categories, onAddOption: addCategory, addLabel: "إضافة فئة" },
             { key: "serial_number", label: "الرقم التسلسلي", type: "mono" },
             {
               key: "employee_id",
@@ -105,7 +105,14 @@ function CustodyPage() {
               type: "select",
               options: ["ممتازة", "جيدة", "مقبولة", "تحتاج إصلاح", "—"],
             },
-            { key: "status", label: "الحالة", type: "status", options: statuses },
+            {
+              key: "status",
+              label: "الحالة",
+              type: "status",
+              options: statuses,
+              onAddOption: addStatus,
+              addLabel: "إضافة حالة",
+            },
           ]}
         />
       </div>
