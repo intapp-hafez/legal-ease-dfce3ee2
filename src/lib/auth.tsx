@@ -239,7 +239,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // the credentials returns a status-coded error and never falls back.
       const unreachable = !error.status && /fetch|network|load/i.test(error.message || "");
       if (unreachable) {
-        const demo = DEMO_USERS.find((u) => u.username === username && u.password === password);
+        const demo = seedUsers.find((u) => u.username === username && u.password === password);
         if (demo) {
           setUser({ id: demo.id, name: demo.name, username: demo.username, role: demo.role, active: true });
           setReady(true);
