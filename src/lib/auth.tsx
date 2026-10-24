@@ -223,15 +223,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(
     async (username: string, password: string) => {
       const email = username.includes("@") ? username : `${username}@int.local`;
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) {
-        return { ok: false, error: "بيانات الدخول غير صحيحة" };
+      let errMsg = "";
+      let errStatus: number | undefined;
+      try {
+        const res = await supabase.auth.signInWithPassword({ email, password });
+        if (!res.error) {
+          logAudit({ action: "تسجيل دخول", target: username, user_id: res.data.user?.id });
+          return { ok: true };
+        }
+        errMsg = res.error.message;
+        errStatus = res.error.status;
+      } catch (err: any) {
+        errMsg = err?.message ?? String(err);
       }
-      logAudit({ action: "تسجيل دخول", target: username, user_id: data.user?.id });
-      return { ok: true };
+      // Backend unreachable (no env / offline): fall back to the local demo
+      // accounts so the prototype stays usable. A real backend that rejects
+      // the credentials returns a status-coded error and never falls back.
+      const unreachable = errStatus === undefined && /fetch|network|load/i.test(errMsg);
+      if (unreachable) {
+        const demo = seedUsers.find((u) => u.username === username && u.password === password);
+        if (demo) {
+          setUser({ id: demo.id, name: demo.name, username: demo.username, role: demo.role, active: true });
+          setReady(true);
+          logAudit({ action: "تسجيل دخول", target: username, user_id: demo.id });
+          return { ok: true };
+        }
+      }
+      return { ok: false, error: "بيانات الدخول غير صحيحة" };
     },
     [],
   );

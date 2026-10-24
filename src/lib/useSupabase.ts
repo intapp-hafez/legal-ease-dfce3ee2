@@ -65,7 +65,7 @@ export function useSupabaseCollection<T extends Row>(tableName: string, idKey: k
         console.error(`Supabase insert error in ${tableName}:`, error.message);
         throw error;
       }
-      return data as T;
+      return data as unknown as T;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [tableName] }),
   });
@@ -85,7 +85,7 @@ export function useSupabaseCollection<T extends Row>(tableName: string, idKey: k
         console.error(`Update error in ${tableName}:`, error.message);
         throw error;
       }
-      return data as T;
+      return data as unknown as T;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [tableName] }),
   });
@@ -111,7 +111,7 @@ export function useSupabaseCollection<T extends Row>(tableName: string, idKey: k
         const payload = rows.map((r) => cleanPayload(r));
         const { data, error } = await supabase.from(tableName).upsert(payload as any, { onConflict: idKey as string }).select(selectQuery);
         if (error) throw error;
-        return data as T[];
+        return data as unknown as T[];
       } catch (err: any) {
         console.warn(`Bulk replace error in ${tableName}:`, err.message || err);
         return rows;
