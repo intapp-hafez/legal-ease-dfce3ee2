@@ -189,16 +189,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         fetchProfile(session.user.id);
         fetchUsers();
       } else {
+        // Restore a persisted local (demo) session when the backend is unreachable
+        const local = readJson<User | null>(SESSION_KEY, null);
+        if (local?.id) setUser({ ...local, active: true });
         setReady(true);
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         fetchProfile(session.user.id);
         fetchUsers();
       } else {
-        setUser(null);
+        // INITIAL_SESSION with no backend session must not wipe a restored
+        // local session; logout clears SESSION_KEY so SIGNED_OUT still clears.
+        if (!readJson<User | null>(SESSION_KEY, null)?.id) setUser(null);
         setReady(true);
       }
     });
@@ -245,7 +250,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (unreachable) {
         const demo = seedUsers.find((u) => u.username === username && u.password === password);
         if (demo) {
-          setUser({ id: demo.id, name: demo.name, username: demo.username, role: demo.role, active: true });
+          const localUser: User = { id: demo.id, name: demo.name, username: demo.username, role: demo.role, active: true };
+          writeJson(SESSION_KEY, localUser);
+          setUser(localUser);
           setReady(true);
           logAudit({ action: "تسجيل دخول", target: username, user_id: demo.id });
           return { ok: true };
@@ -260,6 +267,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     if (user) logAudit({ action: "تسجيل خروج", target: user.username, user_id: user.id });
     await supabase.auth.signOut();
+    writeJson(SESSION_KEY, null);
     setUser(null);
   }, [user]);
 
