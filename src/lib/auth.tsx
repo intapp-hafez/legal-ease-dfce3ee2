@@ -237,9 +237,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         errMsg = err?.message ?? String(err);
       }
       // Backend unreachable (no env / offline): fall back to the local demo
-      // accounts so the prototype stays usable. A real backend that rejects
-      // the credentials returns a status-coded error and never falls back.
-      const unreachable = errStatus === undefined && /fetch|network|load/i.test(errMsg);
+      // accounts so the prototype stays usable. A network failure surfaces as
+      // a status-coded error with status 0 (or undefined). A real backend that
+      // rejects the credentials returns 400/403/422 and never falls back.
+      const unreachable =
+        (errStatus === undefined || errStatus === 0) && /fetch|network|load/i.test(errMsg);
       if (unreachable) {
         const demo = seedUsers.find((u) => u.username === username && u.password === password);
         if (demo) {
