@@ -249,6 +249,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { ok: true };
         }
       }
+      console.warn("[auth] login failed:", errMsg, "status:", errStatus);
       return { ok: false, error: "بيانات الدخول غير صحيحة" };
     },
     [],
